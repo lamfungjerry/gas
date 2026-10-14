@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>學習程式</title>
+  <title>My Apps</title>
 
   <!-- iOS 加入主畫面設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="學習程式">
+  <meta name="apple-mobile-web-app-title" content="My Apps">
   
-  <!-- index.html 本身的 Icon（使用相對路徑指向 GitHub 內的圖片） -->
+  <!-- 主畫面與網站 Icon -->
   <link rel="apple-touch-icon" href="icons/launcher.png">
   <link rel="icon" type="image/png" href="icons/launcher.png">
 
@@ -23,7 +23,6 @@
       --grid-gap-x: 16px;
     }
 
-    /* iPad 及大螢幕自動放大圖示與間距 */
     @media (min-width: 768px) {
       :root {
         --icon-size: 72px;
@@ -47,13 +46,11 @@
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
       min-height: 100vh;
       min-height: 100dvh;
-      /* iOS 風格預設背景（如果你連桌布都想放 GitHub，可改為 url('icons/bg.jpg')） */
       background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
       background-attachment: fixed;
       background-size: cover;
       background-position: center;
       color: #ffffff;
-      /* 避開 iPhone 瀏海/動態島與底部邊緣 */
       padding-top: calc(env(safe-area-inset-top) + 32px);
       padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
       padding-left: calc(env(safe-area-inset-left) + 20px);
@@ -67,17 +64,14 @@
       max-width: 1024px;
     }
 
-    /* App 網格系統 */
     .app-grid {
       display: grid;
-      /* iPhone 直向固定 4 列 */
       grid-template-columns: repeat(4, 1fr);
       row-gap: var(--grid-gap-y);
       column-gap: var(--grid-gap-x);
       justify-items: center;
     }
 
-    /* iPhone 橫向及 iPad：根據寬度自動調節列數 */
     @media (min-width: 560px) {
       .app-grid {
         grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
@@ -90,7 +84,6 @@
       }
     }
 
-    /* 單一 App 項目 */
     .app-item {
       display: flex;
       flex-direction: column;
@@ -101,7 +94,6 @@
       cursor: pointer;
     }
 
-    /* App 圖示外框 */
     .app-icon {
       width: var(--icon-size);
       height: var(--icon-size);
@@ -122,13 +114,11 @@
       display: block;
     }
 
-    /* iOS 點擊回饋效果（按下時縮小並變暗） */
     .app-item:active .app-icon {
       transform: scale(0.90);
       filter: brightness(0.75);
     }
 
-    /* App 名稱 */
     .app-title {
       margin-top: 7px;
       font-size: var(--font-size-title);
@@ -142,60 +132,71 @@
       text-overflow: ellipsis;
       letter-spacing: 0.2px;
     }
+
+    /* 全螢幕 GAS 容器（預設隱藏） */
+    #appFrame {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      border: none;
+      background-color: #ffffff;
+      z-index: 9999;
+    }
   </style>
 </head>
 <body>
 
-  <main class="desktop-container">
+  <main class="desktop-container" id="desktop">
     <div id="appGrid" class="app-grid"></div>
   </main>
 
+  <!-- 用於全螢幕載入 GAS 的 iframe -->
+  <iframe id="appFrame" allow="autoplay; microphone; clipboard-write; fullscreen"></iframe>
+
+  <!-- 1. 先載入外部的 apps.js 資料檔 -->
+  <script src="apps.js"></script>
+
+  <!-- 2. 執行畫面渲染邏輯 -->
   <script>
-    /**
-     * ============================================================
-     * Google Apps Script (GAS) 列表
-     * ============================================================
-     * - title: App 名稱
-     * - url:   GAS 部署網址
-     * - icon:  GitHub 內的圖片相對路徑（例如放在 icons 資料夾內就寫 "icons/xxx.png"）
-     */
-    const apps = [
-      {
-        title: "英語單字",
-        url: "https://script.google.com/macros/s/AKfycbxFvVr6NmalmkPZ-7APo_b3uMOK-JQRQKZ7XvClptiPu09zI8u7wYyFr20kwRvqVnze2w/exec",
-        icon: "icons/app1.png"
-      },
-      {
-        title: "英語讀默",
-        url: "https://script.google.com/macros/s/AKfycbxXD65cEBUuioQKLSDFb9K6_yCobRej7uKjmkRrKINWRYbbp-vFL2K3NiOUgQvFaLaI/exec",
-        icon: "icons/app2.png"
-      }
-    ];
-
     const gridContainer = document.getElementById('appGrid');
+    const desktop = document.getElementById('desktop');
+    const appFrame = document.getElementById('appFrame');
 
-    apps.forEach(app => {
-      const link = document.createElement('a');
-      link.className = 'app-item';
-      link.href = app.url;
+    // 確保 apps.js 成功載入後才執行
+    if (typeof apps !== 'undefined' && Array.isArray(apps)) {
+      apps.forEach(app => {
+        const item = document.createElement('div');
+        item.className = 'app-item';
 
-      const iconBox = document.createElement('div');
-      iconBox.className = 'app-icon';
+        // 點擊後直接在全螢幕 iframe 開啟 GAS
+        item.addEventListener('click', () => {
+          appFrame.src = app.url;
+          appFrame.style.display = 'block';
+          desktop.style.display = 'none';
+        });
 
-      const img = document.createElement('img');
-      img.src = app.icon;
-      img.alt = app.title;
-      img.loading = 'lazy';
-      iconBox.appendChild(img);
+        const iconBox = document.createElement('div');
+        iconBox.className = 'app-icon';
 
-      const title = document.createElement('span');
-      title.className = 'app-title';
-      title.textContent = app.title;
+        const img = document.createElement('img');
+        img.src = app.icon;
+        img.alt = app.title;
+        img.loading = 'lazy';
+        iconBox.appendChild(img);
 
-      link.appendChild(iconBox);
-      link.appendChild(title);
-      gridContainer.appendChild(link);
-    });
+        const title = document.createElement('span');
+        title.className = 'app-title';
+        title.textContent = app.title;
+
+        item.appendChild(iconBox);
+        item.appendChild(title);
+        gridContainer.appendChild(item);
+      });
+    }
   </script>
 </body>
 </html>
