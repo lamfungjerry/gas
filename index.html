@@ -1,38 +1,211 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的應用程式</title>
-    
-    <!-- 關鍵：指定同目錄底下的自訂圖示 -->
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    
-    <!-- 讓網頁全螢幕顯示（看起來更像原生 App） -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    
-    <script>
-        // 【請將下方的網址替換成你的 GAS Web App 網址】
-        window.location.href = "https://script.google.com/macros/s/AKfycbxnFG25nHa-4LHoSrM_EylBbYHBQnnQtx7W7dK_MoEPgEvPnOmx8uv4aFqP1cIg-03q/exec";
-    </script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f5f5f7;
-            color: #1d1d1f;
-        }
-        .loading { text-align: center; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>學習程式</title>
+
+  <!-- iOS 加入主畫面設定（GitHub Pages 可 100% 讀取） -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="學習程式">
+  
+  <link rel="apple-touch-icon" href="icons/launcher.png">
+  <link rel="icon" type="image/png" href="icons/launcher.png">
+
+  <style>
+    :root {
+      --icon-size: 62px;
+      --icon-radius: 14px;
+      --font-size-title: 12px;
+      --grid-gap-y: 24px;
+      --grid-gap-x: 16px;
+    }
+
+    @media (min-width: 768px) {
+      :root {
+        --icon-size: 72px;
+        --icon-radius: 16px;
+        --font-size-title: 13px;
+        --grid-gap-y: 32px;
+        --grid-gap-x: 24px;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* 鎖定外層，避免外層搶走手勢 */
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
+      background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
+      color: #ffffff;
+      user-select: none;
+    }
+
+    /* 主桌面容器（如果 Icon 多過一頁，桌面自己都可以上下碌） */
+    .desktop-container {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-top: calc(env(safe-area-inset-top) + 32px);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+      padding-left: calc(env(safe-area-inset-left) + 20px);
+      padding-right: calc(env(safe-area-inset-right) + 20px);
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-grid {
+      width: 100%;
+      max-width: 1024px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      row-gap: var(--grid-gap-y);
+      column-gap: var(--grid-gap-x);
+      justify-items: center;
+      align-content: start;
+    }
+
+    @media (min-width: 560px) {
+      .app-grid {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      }
+    }
+
+    @media (min-width: 768px) {
+      .app-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      }
+    }
+
+    .app-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      width: 100%;
+      max-width: 90px;
+      cursor: pointer;
+    }
+
+    .app-icon {
+      width: var(--icon-size);
+      height: var(--icon-size);
+      border-radius: var(--icon-radius);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+      transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.15s ease;
+      overflow: hidden;
+      background-color: rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .app-item:active .app-icon {
+      transform: scale(0.90);
+      filter: brightness(0.75);
+    }
+
+    .app-title {
+      margin-top: 7px;
+      font-size: var(--font-size-title);
+      font-weight: 500;
+      color: #ffffff;
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.2px;
+    }
+
+    /* 全螢幕 GAS 容器 */
+    #frameWrapper {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #ffffff;
+      z-index: 9999;
+    }
+
+    #appFrame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+  </style>
 </head>
 <body>
-    <div class="loading">
-        <p>正在安全重新導向至應用程式...</p>
-    </div>
+
+  <main class="desktop-container" id="desktop">
+    <div id="appGrid" class="app-grid"></div>
+  </main>
+
+  <div id="frameWrapper">
+    <iframe id="appFrame" allow="autoplay; microphone; clipboard-write; fullscreen"></iframe>
+  </div>
+
+  <!-- 載入你的 apps.js 資料檔 -->
+  <script src="apps.js"></script>
+
+  <script>
+    const gridContainer = document.getElementById('appGrid');
+    const desktop = document.getElementById('desktop');
+    const frameWrapper = document.getElementById('frameWrapper');
+    const appFrame = document.getElementById('appFrame');
+
+    if (typeof apps !== 'undefined' && Array.isArray(apps)) {
+      apps.forEach(app => {
+        const item = document.createElement('div');
+        item.className = 'app-item';
+
+        item.addEventListener('click', () => {
+          appFrame.src = app.url;
+          frameWrapper.style.display = 'block';
+          desktop.style.display = 'none';
+        });
+
+        const iconBox = document.createElement('div');
+        iconBox.className = 'app-icon';
+
+        const img = document.createElement('img');
+        img.src = app.icon;
+        img.alt = app.title;
+        img.loading = 'lazy';
+        iconBox.appendChild(img);
+
+        const title = document.createElement('span');
+        title.className = 'app-title';
+        title.textContent = app.title;
+
+        item.appendChild(iconBox);
+        item.appendChild(title);
+        gridContainer.appendChild(item);
+      });
+    }
+  </script>
 </body>
 </html>
