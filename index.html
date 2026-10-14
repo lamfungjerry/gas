@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>學習程式</title>
 
-  <!-- iOS 加入主畫面設定（GitHub Pages 可 100% 讀取） -->
+  <!-- iOS 加入主畫面設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="學習程式">
   
+  <!-- 主畫面與網站 Icon -->
   <link rel="apple-touch-icon" href="icons/launcher.png">
   <link rel="icon" type="image/png" href="icons/launcher.png">
 
@@ -38,24 +39,18 @@
       padding: 0;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden; /* 鎖定外層，避免外層搶走手勢 */
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
-      background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
-      color: #ffffff;
       user-select: none;
     }
 
-    /* 主桌面容器（如果 Icon 多過一頁，桌面自己都可以上下碌） */
-    .desktop-container {
-      width: 100%;
-      height: 100%;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+      color: #ffffff;
       padding-top: calc(env(safe-area-inset-top) + 32px);
       padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
       padding-left: calc(env(safe-area-inset-left) + 20px);
@@ -64,15 +59,17 @@
       justify-content: center;
     }
 
-    .app-grid {
+    .desktop-container {
       width: 100%;
       max-width: 1024px;
+    }
+
+    .app-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       row-gap: var(--grid-gap-y);
       column-gap: var(--grid-gap-x);
       justify-items: center;
-      align-content: start;
     }
 
     @media (min-width: 560px) {
@@ -136,29 +133,18 @@
       letter-spacing: 0.2px;
     }
 
-    /* 全螢幕 GAS 容器（已預留 iOS 頂部狀態列空間） */
-    #frameWrapper {
+    /* 全螢幕 GAS 容器（預設隱藏） */
+    #appFrame {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
-      right: 0;
-      bottom: 0;
-      width: 100%;
-      height: 100%;
-      /* 背景色設為深色或配合你 GAS 頂部的顏色，令頂部狀態列自然融合 */
-      background-color: #1a1c2e; 
-      /* 🔥 關鍵：由最外層幫 iframe 頂開 iPhone 瀏海/動態島高度 */
-      padding-top: env(safe-area-inset-top);
-      z-index: 9999;
-    }
-
-    #appFrame {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
       border: none;
-      display: block;
       background-color: #ffffff;
+      z-index: 9999;
     }
   </style>
 </head>
@@ -168,27 +154,28 @@
     <div id="appGrid" class="app-grid"></div>
   </main>
 
-  <div id="frameWrapper">
-    <iframe id="appFrame" allow="autoplay; microphone; clipboard-write; fullscreen"></iframe>
-  </div>
+  <!-- 用於全螢幕載入 GAS 的 iframe -->
+  <iframe id="appFrame" allow="autoplay; microphone; clipboard-write; fullscreen"></iframe>
 
-  <!-- 載入你的 apps.js 資料檔 -->
+  <!-- 1. 先載入外部的 apps.js 資料檔 -->
   <script src="apps.js"></script>
 
+  <!-- 2. 執行畫面渲染邏輯 -->
   <script>
     const gridContainer = document.getElementById('appGrid');
     const desktop = document.getElementById('desktop');
-    const frameWrapper = document.getElementById('frameWrapper');
     const appFrame = document.getElementById('appFrame');
 
+    // 確保 apps.js 成功載入後才執行
     if (typeof apps !== 'undefined' && Array.isArray(apps)) {
       apps.forEach(app => {
         const item = document.createElement('div');
         item.className = 'app-item';
 
+        // 點擊後直接在全螢幕 iframe 開啟 GAS
         item.addEventListener('click', () => {
           appFrame.src = app.url;
-          frameWrapper.style.display = 'block';
+          appFrame.style.display = 'block';
           desktop.style.display = 'none';
         });
 
