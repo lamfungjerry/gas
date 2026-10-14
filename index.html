@@ -136,7 +136,7 @@
       letter-spacing: 0.2px;
     }
 
-    /* 全螢幕 GAS 容器 */
+    /* 全螢幕 GAS 容器（已預留 iOS 頂部狀態列空間） */
     #frameWrapper {
       display: none;
       position: fixed;
@@ -146,7 +146,10 @@
       bottom: 0;
       width: 100%;
       height: 100%;
-      background-color: #ffffff;
+      /* 背景色設為深色或配合你 GAS 頂部的顏色，令頂部狀態列自然融合 */
+      background-color: #1a1c2e; 
+      /* 🔥 關鍵：由最外層幫 iframe 頂開 iPhone 瀏海/動態島高度 */
+      padding-top: env(safe-area-inset-top);
       z-index: 9999;
     }
 
@@ -155,6 +158,7 @@
       height: 100%;
       border: none;
       display: block;
+      background-color: #ffffff;
     }
   </style>
 </head>
