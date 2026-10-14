@@ -9,12 +9,7 @@ const apps = [
         icon: "icons/app1.png"
       },
       {
-        title: "英語讀默v1",
-        url: "https://script.google.com/macros/s/AKfycbxXD65cEBUuioQKLSDFb9K6_yCobRej7uKjmkRrKINWRYbbp-vFL2K3NiOUgQvFaLaI/exec",
-        icon: "icons/app2.png"
-      },
-      {
-        title: "英語讀默v2",
+        title: "英語讀默",
         url: "https://script.google.com/macros/s/AKfycbxXD65cEBUuioQKLSDFb9K6_yCobRej7uKjmkRrKINWRYbbp-vFL2K3NiOUgQvFaLaI/exec",
         icon: "icons/app2.png"
       }
