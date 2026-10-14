@@ -1,37 +1,245 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的應用程式</title>
-    
-    <!-- 關鍵：指定同目錄底下的自訂圖示 -->
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    
-    <!-- 讓網頁全螢幕顯示（看起來更像原生 App） -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    
-    <script>
-        // 【請將下方的網址替換成你的 GAS Web App 網址】
-    </script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f5f5f7;
-            color: #1d1d1f;
-        }
-        .loading { text-align: center; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>My Apps</title>
+
+  <!-- iOS 加入主畫面 (Web App) 支援設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="My Apps">
+  
+  <!-- 主畫面預設 Icon (可自行換成你的圖片路徑) -->
+  <link rel="apple-touch-icon" href="https://via.placeholder.com/180/007AFF/FFFFFF?text=Apps">
+
+  <style>
+    :root {
+      --icon-size: 62px;
+      --icon-radius: 14px;
+      --font-size-title: 12px;
+      --grid-gap-y: 24px;
+      --grid-gap-x: 16px;
+    }
+
+    /* iPad 及大螢幕自動放大圖示與間距 */
+    @media (min-width: 768px) {
+      :root {
+        --icon-size: 72px;
+        --icon-radius: 16px;
+        --font-size-title: 13px;
+        --grid-gap-y: 32px;
+        --grid-gap-x: 24px;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      /* iOS 風格預設漸層背景 (亦可改為 background-image: url('wallpaper.jpg')) */
+      background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+      color: #ffffff;
+      /* 避開 iPhone 瀏海/動態島與底部 Home Indicator */
+      padding-top: calc(env(safe-area-inset-top) + 32px);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+      padding-left: calc(env(safe-area-inset-left) + 20px);
+      padding-right: calc(env(safe-area-inset-right) + 20px);
+      display: flex;
+      justify-content: center;
+    }
+
+    /* 主容器 */
+    .desktop-container {
+      width: 100%;
+      max-width: 1024px;
+    }
+
+    /* App 網格系統 */
+    .app-grid {
+      display: grid;
+      /* iPhone 直向預設 4 列 */
+      grid-template-columns: repeat(4, 1fr);
+      row-gap: var(--grid-gap-y);
+      column-gap: var(--grid-gap-x);
+      justify-items: center;
+    }
+
+    /* iPhone 橫向、iPad 直向/橫向、電腦螢幕：根據寬度自動調節列數 */
+    @media (min-width: 560px) {
+      .app-grid {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      }
+    }
+
+    @media (min-width: 768px) {
+      .app-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      }
+    }
+
+    /* 單一 App 項目 */
+    .app-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      width: 100%;
+      max-width: 90px;
+      cursor: pointer;
+    }
+
+    /* App 圖示外框 */
+    .app-icon {
+      width: var(--icon-size);
+      height: var(--icon-size);
+      border-radius: var(--icon-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(var(--icon-size) * 0.52);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+      transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.15s ease;
+      overflow: hidden;
+      background-color: #ffffff;
+      position: relative;
+    }
+
+    /* 使用圖片作為 Icon 時的樣式 */
+    .app-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* iOS 點擊回饋效果（按下時縮小並變暗） */
+    .app-item:active .app-icon {
+      transform: scale(0.90);
+      filter: brightness(0.75);
+    }
+
+    /* App 名稱 */
+    .app-title {
+      margin-top: 7px;
+      font-size: var(--font-size-title);
+      font-weight: 500;
+      color: #ffffff;
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.2px;
+    }
+  </style>
 </head>
 <body>
-    <div class="loading">
-        <p>正在安全重新導向至應用程式...</p>
-    </div>
+
+  <main class="desktop-container">
+    <div id="appGrid" class="app-grid"></div>
+  </main>
+
+  <script>
+    /**
+     * ============================================================
+     * 在這裡管理你的 Google Apps Script (GAS) 列表
+     * ============================================================
+     * 屬性說明：
+     * - title: 顯示在 Icon 下方的名稱
+     * - url:   GAS 的部署網址 (https://script.google.com/macros/s/.../exec)
+     * - icon:  可以填 Emoji (如 "🔊")，或者圖片路徑/網址 (如 "./icons/app1.png" 或 "https://...")
+     * - bg:    當使用 Emoji 時的背景顏色或漸層 (若使用圖片可省略)
+     */
+    const apps = [
+      {
+        title: "英文默書",
+        url: "https://script.google.com/macros/s/YOUR_GAS_ID_1/exec",
+        icon: "🗣️",
+        bg: "linear-gradient(135deg, #00C6FF 0%, #0072FF 100%)"
+      },
+      {
+        title: "數學練習",
+        url: "https://script.google.com/macros/s/YOUR_GAS_ID_2/exec",
+        icon: "📐",
+        bg: "linear-gradient(135deg, #FF9966 0%, #FF5E62 100%)"
+      },
+      {
+        title: "旅遊行程",
+        url: "https://script.google.com/macros/s/YOUR_GAS_ID_3/exec",
+        icon: "✈️",
+        bg: "linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%)"
+      },
+      {
+        title: "家庭記帳",
+        url: "https://script.google.com/macros/s/YOUR_GAS_ID_4/exec",
+        icon: "💰",
+        bg: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"
+      },
+      {
+        title: "計分工具",
+        url: "https://script.google.com/macros/s/YOUR_GAS_ID_5/exec",
+        icon: "🎲",
+        bg: "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)"
+      },
+      {
+        title: "圖片範例",
+        url: "https://script.google.com/macros/s/YOUR_GAS_ID_6/exec",
+        // 如果 icon 包含 "/" 或 "." 或 "http"，會自動切換為 <img> 圖片模式
+        icon: "https://via.placeholder.com/150/FF2D55/FFFFFF?text=GAS"
+      }
+    ];
+
+    // 渲染 App 列表
+    const gridContainer = document.getElementById('appGrid');
+
+    apps.forEach(app => {
+      const link = document.createElement('a');
+      link.className = 'app-item';
+      link.href = app.url;
+      // 使用 _blank 確保在 iOS「加入主畫面」模式下，能跳出至 Safari 正常讀取 Google 登入 Cookie
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+
+      const iconBox = document.createElement('div');
+      iconBox.className = 'app-icon';
+      if (app.bg) {
+        iconBox.style.background = app.bg;
+      }
+
+      // 判斷 icon 是圖片網址/路徑，還是純文字/Emoji
+      const isImage = app.icon.includes('/') || app.icon.includes('.') || app.icon.startsWith('data:image');
+      if (isImage) {
+        const img = document.createElement('img');
+        img.src = app.icon;
+        img.alt = app.title;
+        img.loading = 'lazy';
+        iconBox.appendChild(img);
+      } else {
+        iconBox.textContent = app.icon;
+      }
+
+      const title = document.createElement('span');
+      title.className = 'app-title';
+      title.textContent = app.title;
+
+      link.appendChild(iconBox);
+      link.appendChild(title);
+      gridContainer.appendChild(link);
+    });
+  </script>
 </body>
 </html>
