@@ -5,7 +5,7 @@
 const apps = [
       {
         title: "英語單字",
-        url: "https://script.google.com/macros/s/AKfycbxFvVr6NmalmkPZ-7APo_b3uMOK-JQRQKZ7XvClptiPu09zI8u7wYyFr20kwRvqVnze2w/exec",
+        url: "https://lamfungjerry.github.io/word/",
         icon: "icons/app1.png"
       },
       {
