@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>學習程式</title>
 
-  <!-- iOS 加入主畫面設定 -->
+  <!-- 1. 引入 manifest.json，設定 scope 為 "/" 以允許跨 Repo 全螢幕跳轉 -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- 2. iOS Web App 原生全螢幕設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="學習程式">
   
-  <!-- index.html 本身的 Icon（使用相對路徑指向 GitHub 內的圖片） -->
-  <link rel="manifest" href="manifest.json">
+  <!-- 3. 主畫面與網站 Icon -->
+  <link rel="apple-touch-icon" href="icons/launcher.png">
+  <link rel="icon" type="image/png" href="icons/launcher.png">
 
   <style>
     :root {
@@ -22,7 +26,6 @@
       --grid-gap-x: 16px;
     }
 
-    /* iPad 及大螢幕自動放大圖示與間距 */
     @media (min-width: 768px) {
       :root {
         --icon-size: 72px;
@@ -39,26 +42,31 @@
       padding: 0;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
-      user-select: none;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
       min-height: 100vh;
       min-height: 100dvh;
-      /* iOS 風格預設背景（如果你連桌布都想放 GitHub，可改為 url('icons/bg.jpg')） */
       background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
       background-attachment: fixed;
       background-size: cover;
       background-position: center;
       color: #ffffff;
-      /* 避開 iPhone 瀏海/動態島與底部邊緣 */
+      
+      /* 避開 iPhone 瀏海與底部導覽條 */
       padding-top: calc(env(safe-area-inset-top) + 32px);
       padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
       padding-left: calc(env(safe-area-inset-left) + 20px);
       padding-right: calc(env(safe-area-inset-right) + 20px);
+      
       display: flex;
       justify-content: center;
+      user-select: none;
+      
+      /* 確保 App 數量多時，桌面可以順暢上下碌 */
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .desktop-container {
@@ -66,17 +74,15 @@
       max-width: 1024px;
     }
 
-    /* App 網格系統 */
     .app-grid {
       display: grid;
-      /* iPhone 直向固定 4 列 */
       grid-template-columns: repeat(4, 1fr);
       row-gap: var(--grid-gap-y);
       column-gap: var(--grid-gap-x);
       justify-items: center;
+      align-content: start;
     }
 
-    /* iPhone 橫向及 iPad：根據寬度自動調節列數 */
     @media (min-width: 560px) {
       .app-grid {
         grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
@@ -89,18 +95,16 @@
       }
     }
 
-    /* 單一 App 項目 */
+    /* 將 <a> 改為 <div>，由 JS 負責跳轉 */
     .app-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      text-decoration: none;
       width: 100%;
       max-width: 90px;
       cursor: pointer;
     }
 
-    /* App 圖示外框 */
     .app-icon {
       width: var(--icon-size);
       height: var(--icon-size);
@@ -112,6 +116,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: calc(var(--icon-size) * 0.5); /* 如果用 Emoji，設定字體大小 */
     }
 
     .app-icon img {
@@ -121,13 +126,11 @@
       display: block;
     }
 
-    /* iOS 點擊回饋效果（按下時縮小並變暗） */
     .app-item:active .app-icon {
       transform: scale(0.90);
       filter: brightness(0.75);
     }
 
-    /* App 名稱 */
     .app-title {
       margin-top: 7px;
       font-size: var(--font-size-title);
@@ -145,36 +148,50 @@
 </head>
 <body>
 
-  <main class="desktop-container">
+  <main class="desktop-container" id="desktop">
     <div id="appGrid" class="app-grid"></div>
   </main>
 
+  <!-- 載入你的 apps.js 資料檔 -->
   <script src="apps.js"></script>
+
   <script>
     const gridContainer = document.getElementById('appGrid');
 
-    apps.forEach(app => {
-      const link = document.createElement('a');
-      link.className = 'app-item';
-      link.href = app.url;
+    if (typeof apps !== 'undefined' && Array.isArray(apps)) {
+      apps.forEach(app => {
+        // 🔥 將容器設定為 div，防止 iOS Safari 將 <a> 標籤視為跳出 App
+        const item = document.createElement('div');
+        item.className = 'app-item';
 
-      const iconBox = document.createElement('div');
-      iconBox.className = 'app-icon';
+        // 🔥 使用 location.href 進行跳轉，確保維持全螢幕狀態
+        item.addEventListener('click', () => {
+          window.location.href = app.url;
+        });
 
-      const img = document.createElement('img');
-      img.src = app.icon;
-      img.alt = app.title;
-      img.loading = 'lazy';
-      iconBox.appendChild(img);
+        const iconBox = document.createElement('div');
+        iconBox.className = 'app-icon';
 
-      const title = document.createElement('span');
-      title.className = 'app-title';
-      title.textContent = app.title;
+        // 判斷是圖片還是 Emoji
+        if (app.icon.includes('/') || app.icon.includes('.') || app.icon.startsWith('http')) {
+          const img = document.createElement('img');
+          img.src = app.icon;
+          img.alt = app.title;
+          img.loading = 'lazy';
+          iconBox.appendChild(img);
+        } else {
+          iconBox.textContent = app.icon; // 直接顯示 Emoji 或純文字
+        }
 
-      link.appendChild(iconBox);
-      link.appendChild(title);
-      gridContainer.appendChild(link);
-    });
+        const title = document.createElement('span');
+        title.className = 'app-title';
+        title.textContent = app.title;
+
+        item.appendChild(iconBox);
+        item.appendChild(title);
+        gridContainer.appendChild(item);
+      });
+    }
   </script>
 </body>
 </html>
