@@ -1,0 +1,16 @@
+{
+  "name": "學習程式",
+  "short_name": "學習程式",
+  "start_url": "/gas/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a1c2e",
+  "theme_color": "#1a1c2e",
+  "icons": [
+    {
+      "src": "icons/launcher.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
