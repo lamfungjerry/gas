@@ -14,7 +14,7 @@ const apps = [
         icon: "icons/app2.png"
       },
       {
-        title: "讀默",
+        title: "長文讀默",
         url: "https://lamfungjerry.github.io/eng-dict/",
         icon: "icons/app3.png"
       }
