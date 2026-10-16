@@ -12,5 +12,10 @@ const apps = [
         title: "英語讀默",
         url: "https://lamfungjerry.github.io/dictation/",
         icon: "icons/app2.png"
+      },
+      {
+        title: "讀默",
+        url: "https://lamfungjerry.github.io/eng-dict/",
+        icon: "icons/app2.png"
       }
 ];
