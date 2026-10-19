@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>小二（P.2）英文測驗必考生字手冊 | Word 溫習講義</title>
+  <style>
+    /* =========================================
+       1. 全局基礎樣式（Word 講義 / 紙張風格）
+       ========================================= */
+    :root {
+      --primary: #1e40af;         /* 深海軍藍 (Word 標題風) */
+      --primary-light: #eff6ff;   /* 淺藍背景 */
+      --secondary: #0d9488;       /* 青綠色 */
+      --accent-star: #eab308;      /* 星星黃色 */
+      --accent-alert: #b91c1c;     /* 考點警告紅 */
+      --unfamiliar-bg: #fffbeb;    /* 唔識/待溫底色 (溫和淡黃) */
+      --unfamiliar-border: #f59e0b;/* 待溫框線 */
+      --text-main: #1f2937;       /* 深灰文字 */
+      --text-muted: #64748b;      /* 次要文字 */
+      --border-color: #e2e8f0;    /* 淺邊框 */
+      --card-bg: #ffffff;         /* 白底卡片 */
+      --page-bg: #f1f5f9;         /* 講義襯底灰 */
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-doc: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "PingFang TC", "Hiragino Sans GB", "Microsoft JhengHei", "Chalkboard SE", Roboto, sans-serif;
+      background-color: var(--page-bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding-bottom: 80px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* =========================================
+       2. 頂部固定狀態列（Sticky Top Bar）
+       ========================================= */
+    .sticky-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 2px solid #cbd5e1;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+      padding: 10px 16px;
+    }
+
+    .sticky-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .progress-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+
+    .badge-stat.unfamiliar-stat {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+
+    .badge-stat span.num {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .action-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    /* 篩選按鈕群組 (Segmented Control) */
+    .filter-tabs {
+      display: flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 8px;
+      flex: 1;
+    }
+
+    .filter-btn {
+      flex: 1;
+      min-height: 44px;
+      border: none;
+      background: transparent;
+      color: #475569;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn.active {
+      background: #ffffff;
+      color: var(--primary);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-btn.active.unfamiliar-mode {
+      color: #b45309;
+      background: #fffbeb;
+    }
+
+    /* 重設按鈕 */
+    .btn-reset {
+      min-height: 44px;
+      padding: 0 14px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .btn-reset:active {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+
+    /* =========================================
+       3. 講義外框與頁面容器（Word 講義質感）
+       ========================================= */
+    .doc-wrapper {
+      max-width: 860px;
+      margin: 18px auto;
+      padding: 0 12px;
+    }
+
+    .word-sheet {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-doc);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Word 頂部裝飾條 (模擬講義信紙頂沿) */
+    .sheet-top-strip {
+      height: 8px;
+      background: linear-gradient(90deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+    }
+
+    /* 文件頁首資訊 */
+    .sheet-header {
+      padding: 24px 20px 18px;
+      border-bottom: 2px dashed #e2e8f0;
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    }
+
+    .sheet-header-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sheet-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+
+    .sheet-subtitle {
+      font-size: 14px;
+      color: #475569;
+      font-weight: 500;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .study-tips-box {
+      margin-top: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #334155;
+    }
+
+    .study-tips-box strong {
+      color: var(--primary);
+    }
+
+    /* =========================================
+       4. 單元區塊與標題樣式（Word Ribbon 橫幅）
+       ========================================= */
+    .units-container {
+      padding: 16px 14px;
+    }
+
+    .unit-section {
+      margin-bottom: 28px;
+    }
+
+    .unit-section.is-empty {
+      display: none;
+    }
+
+    .unit-ribbon {
+      background: #1e3a8a;
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 6px rgba(30, 58, 138, 0.18);
+    }
+
+    .unit-ribbon-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .unit-ribbon-count {
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    /* =========================================
+       5. 生字卡片（Word 清單列）
+       ========================================= */
+    .vocab-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .vocab-card {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .vocab-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* 唔識／待溫狀態高亮 */
+    .vocab-card.is-unfamiliar {
+      background-color: var(--unfamiliar-bg);
+      border-color: var(--unfamiliar-border);
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+    }
+
+    .vocab-card.is-unfamiliar::before {
+      content: "待溫";
+      position: absolute;
+      top: -9px;
+      right: 14px;
+      background: #d97706;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 1px 8px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 卡片頭部：單字、形態、中文與操作按鈕 */
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .word-main-group {
+      flex: 1;
+    }
+
+    .word-row {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .word-title {
+      font-size: 21px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+    }
+
+    .word-forms {
+      font-size: 14px;
+      color: #2563eb;
+      font-weight: 600;
+      background: #eff6ff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .word-zh {
+      font-size: 16px;
+      font-weight: 700;
+      color: #334155;
+      margin-top: 2px;
+    }
+
+    /* 操作按鈕組（確保手機點擊區域 >= 44x44px） */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-action {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #475569;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    .btn-action:active {
+      transform: scale(0.95);
+    }
+
+    /* 發音喇叭按鈕 */
+    .btn-tts {
+      background: #f8fafc;
+      color: #1e40af;
+      border-color: #bfdbfe;
+    }
+
+    .btn-tts:active, .btn-tts.speaking {
+      background: #dbeafe;
+      border-color: #3b82f6;
+      color: #1d4ed8;
+    }
+
+    .btn-tts .icon-speaker {
+      font-size: 18px;
+    }
+
+    /* 標記星號按鈕 */
+    .btn-star {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #64748b;
+    }
+
+    .btn-star.marked {
+      background: #fef3c7;
+      border-color: #f59e0b;
+      color: #b45309;
+    }
+
+    .btn-star .star-icon {
+      font-size: 19px;
+      line-height: 1;
+    }
+
+    /* 考點警示標籤 */
+    .exam-point-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 5px;
+      margin-top: 8px;
+    }
+
+    .exam-point-tag .exam-icon {
+      font-size: 13px;
+    }
+
+    /* 例句／答句信號框（Word 引用格式） */
+    .sentence-box {
+      margin-top: 10px;
+      background: #f8fafc;
+      border-left: 3.5px solid #3b82f6;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .vocab-card.is-unfamiliar .sentence-box {
+      background: rgba(254, 243, 199, 0.6);
+      border-left-color: #d97706;
+    }
+
+    .sentence-text {
+      font-size: 14.5px;
+      color: #1e293b;
+      font-style: italic;
+      line-height: 1.45;
+      flex: 1;
+    }
+
+    .sentence-btn-tts {
+      min-width: 36px;
+      min-height: 36px;
+      padding: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #64748b;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sentence-btn-tts:active {
+      background: #e2e8f0;
+      color: #1e40af;
+    }
+
+    /* =========================================
+       6. 空狀態提示（全部溫完 / 冇標記）
+       ========================================= */
+    .empty-state {
+      display: none;
+      text-align: center;
+      padding: 48px 20px;
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      border: 2px dashed #cbd5e1;
+      margin: 20px 0;
+    }
+
+    .empty-state.show {
+      display: block;
+    }
+
+    .empty-icon {
+      font-size: 54px;
+      margin-bottom: 12px;
+    }
+
+    .empty-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    .empty-desc {
+      font-size: 14px;
+      color: #64748b;
+      max-width: 380px;
+      margin: 0 auto 16px;
+    }
+
+    .empty-btn {
+      min-height: 44px;
+      padding: 0 20px;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* =========================================
+       7. 頁尾資訊
+       ========================================= */
+    .sheet-footer {
+      text-align: center;
+      padding: 24px 16px 12px;
+      font-size: 12px;
+      color: #94a3b8;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    /* 列印與純文字視圖相容優化 */
+    @media print {
+      body {
+        background: #ffffff;
+        padding-bottom: 0;
+      }
+      .sticky-bar, .card-actions, .sentence-btn-tts {
+        display: none !important;
+      }
+      .doc-wrapper {
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+      }
+      .word-sheet {
+        border: none;
+        box-shadow: none;
+      }
+      .vocab-card {
+        break-inside: avoid;
+        border: 1px solid #cbd5e1;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sheet-title {
+        font-size: 20px;
+      }
+      .word-title {
+        font-size: 19px;
+      }
+      .card-top {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .card-actions {
+        margin-top: 10px;
+        justify-content: flex-end;
+      }
+      .btn-action {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================
+       頂部固定狀態與控制列（Sticky Top Bar）
+       ========================================= -->
+  <header class="sticky-bar">
+    <div class="sticky-inner">
+      <div class="status-row">
+        <div class="progress-badges">
+          <div class="badge-stat">
+            <span>📚 總生字</span>
+            <span class="num" id="totalCount">0</span>
+          </div>
+          <div class="badge-stat unfamiliar-stat">
+            <span>⭐️ 待溫生字</span>
+            <span class="num" id="unfamiliarCount">0</span>
+          </div>
+        </div>
+        <button class="btn-reset" id="btnReset" title="重設清空所有待溫生字標記">
+          <span>🔄</span> 清空標記
+        </button>
+      </div>
+
+      <div class="action-controls">
+        <div class="filter-tabs">
+          <button class="filter-btn active" id="filterAll" data-mode="all">
+            <span>📄</span> 顯示全部
+          </button>
+          <button class="filter-btn" id="filterUnfamiliar" data-mode="unfamiliar">
+            <span>⭐️</span> 只睇唔識生字
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================
+       主要內容區（Word 文件 / 講義風格排版）
+       ========================================= -->
+  <main class="doc-wrapper">
+    <div class="word-sheet">
+      <!-- 頂部講義色條 -->
+      <div class="sheet-top-strip"></div>
+
+      <!-- 文件頁首 -->
+      <header class="sheet-header">
+        <div class="sheet-header-meta">
+          <span>Primary 2 (P.2) Revision Guide</span>
+          <span>English Test Handout</span>
+        </div>
+        <h1 class="sheet-title">小二英文測驗必考生字手冊</h1>
+        <div class="sheet-subtitle">
+          <span>🎯 考前衝刺・語音特訓</span>
+          <span>•</span>
+          <span>小學二年級專用</span>
+          <span>•</span>
+          <span>支援離線與原生發音</span>
+        </div>
+
+        <div class="study-tips-box">
+          💡 <strong>家長與小童溫習指南：</strong>
+          點擊 <strong>🔊</strong> 可聆聽正統英語發音（語速已調整為適合小二學生的 0.85 倍速）；點擊 <strong>⭐️ 標記唔識</strong> 可將未熟的生字加入待溫清單，切換至「只睇唔識生字」即可針對弱點集中抽背！所有進度會自動儲存在手機中。
+        </div>
+      </header>
+
+      <!-- 生字單元清單容器 -->
+      <div class="units-container" id="unitsContainer">
+        <!-- 由 JavaScript 動態渲染 5 大範圍 -->
+      </div>
+
+      <!-- 空狀態展示（當篩選為「只睇唔識」且未有標記時） -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🎉👏</div>
+        <h2 class="empty-title">好叻！暫時冇未熟嘅生字！</h2>
+        <p class="empty-desc">你已經完全掌握或暫時未標記任何待溫生字。點擊下方按鈕返回「顯示全部」繼續複習吧！</p>
+        <button class="empty-btn" id="btnReturnAll">返回【顯示全部】</button>
+      </div>
+
+      <!-- 文件頁尾資訊 -->
+      <footer class="sheet-footer">
+        <p>P.2 English Revision Worksheet • Word Document Style • Built for Mobile & Tablet</p>
+      </footer>
+    </div>
+  </main>
+
+  <!-- =========================================
+       JavaScript 核心業務邏輯
+       ========================================= -->
+  <script>
+    // 1. 課文完整數據結構（5 大範圍，共 47 個必考知識點）
+    const VOCAB_DATA = [
+      {
+        unitId: "u1_gadgets",
+        unitTitle: "【範圍一】Unit 1: Gadgets（科技產品與設備）",
+        items: [
+          {
+            id: "u1_1",
+            word: "computer",
+            forms: "a computer / computers",
+            zh: "電腦",
+            examPoint: "Part A/B 常考名詞",
+            sentence: "I can learn about the world with my computer."
+          },
+          {
+            id: "u1_2",
+            word: "screen",
+            forms: "a screen / screens",
+            zh: "螢幕",
+            examPoint: "Part A (特徵題: A tablet has a screen.)",
+            sentence: "A tablet has a screen. / A keyboard doesn't have a screen."
+          },
+          {
+            id: "u1_3",
+            word: "laptop",
+            forms: "a laptop / laptops",
+            zh: "手提電腦",
+            examPoint: "Part B 情境填空",
+            sentence: "My father uses a laptop to do work in the living room."
+          },
+          {
+            id: "u1_4",
+            word: "keyboard",
+            forms: "a keyboard / keyboards",
+            zh: "鍵盤",
+            examPoint: "Part A/B 動作配對 (type words)",
+            sentence: "I type words on the keyboard."
+          },
+          {
+            id: "u1_5",
+            word: "tablet",
+            forms: "a tablet / tablets",
+            zh: "平板電腦",
+            examPoint: "Part B 功能題",
+            sentence: "I use my tablet to watch movies and play games."
+          },
+          {
+            id: "u1_6",
+            word: "mouse",
+            forms: "a mouse / mice",
+            zh: "滑鼠",
+            examPoint: "Part B / NRU U1 (複數必須為 mice)",
+            sentence: "Click the icon with the mouse."
+          },
+          {
+            id: "u1_7",
+            word: "alarm clock",
+            forms: "an alarm clock / alarm clocks",
+            zh: "鬧鐘",
+            examPoint: "Part B (冠詞陷阱: 母音開頭用 an)",
+            sentence: "An alarm clock rings at seven o'clock in the morning."
+          },
+          {
+            id: "u1_8",
+            word: "video game",
+            forms: "a video game / video games",
+            zh: "電子遊戲",
+            examPoint: "Part A / Reading (play video games)",
+            sentence: "My brother likes to play video games on Sundays."
+          },
+          {
+            id: "u1_9",
+            word: "TV",
+            forms: "a TV / TVs",
+            zh: "電視",
+            examPoint: "Part A / Reading (watch cartoons on the TV)",
+            sentence: "We watch cartoons on the TV after school."
+          },
+          {
+            id: "u1_10",
+            word: "cell phone",
+            forms: "a cell phone / cell phones",
+            zh: "手機 / 流動電話",
+            examPoint: "Part A/B 通信工具",
+            sentence: "I use a cell phone to talk to my mother."
+          },
+          {
+            id: "u1_11",
+            word: "radio",
+            forms: "a radio / radios",
+            zh: "收音機",
+            examPoint: "Part A (listen to the radio)",
+            sentence: "My grandfather likes to listen to the radio."
+          }
+        ]
+      },
+      {
+        unitId: "u2_school",
+        unitTitle: "【範圍二】Places & Objects in School（校園設施與物件）",
+        items: [
+          {
+            id: "u2_1",
+            word: "bookcase",
+            forms: "a bookcase / bookcases",
+            zh: "書架 / 書櫃",
+            examPoint: "Part A / Part C (There are many books in the bookcase.)",
+            sentence: "There are many books in the bookcase."
+          },
+          {
+            id: "u2_2",
+            word: "language lab",
+            forms: "a language lab",
+            zh: "語言室 / 電腦室",
+            examPoint: "Part A / Reading (listen to audios)",
+            sentence: "We listen to English audios in the language lab."
+          },
+          {
+            id: "u2_3",
+            word: "projector",
+            forms: "a projector / projectors",
+            zh: "投影機",
+            examPoint: "Part A (show pictures / slides)",
+            sentence: "The teacher uses a projector to show pictures."
+          },
+          {
+            id: "u2_4",
+            word: "cafeteria",
+            forms: "a cafeteria",
+            zh: "學校餐廳 / 飯堂",
+            examPoint: "Part A / Reading (have lunch at 12:30)",
+            sentence: "Students have lunch in the cafeteria at 12:30."
+          },
+          {
+            id: "u2_5",
+            word: "whiteboard",
+            forms: "a whiteboard / whiteboards",
+            zh: "白板",
+            examPoint: "Part A / Part C (writes on the whiteboard)",
+            sentence: "The teacher writes on the whiteboard."
+          },
+          {
+            id: "u2_6",
+            word: "hallway / corridor",
+            forms: "a hallway / a corridor",
+            zh: "走廊",
+            examPoint: "Part A (規則題: Do not run in the hallway / corridor!)",
+            sentence: "Do not run in the hallway / corridor!"
+          },
+          {
+            id: "u2_7",
+            word: "gym",
+            forms: "a gym",
+            zh: "體育館 / 健身室",
+            examPoint: "Part A / Reading (play basketball during PE lessons)",
+            sentence: "We play basketball in the gym during PE lessons."
+          },
+          {
+            id: "u2_8",
+            word: "classroom",
+            forms: "a classroom / classrooms",
+            zh: "課室 / 教室",
+            examPoint: "Part A / Reading (on the second floor)",
+            sentence: "Our classroom is on the second floor."
+          },
+          {
+            id: "u2_9",
+            word: "playground",
+            forms: "a playground",
+            zh: "操場 / 遊樂場",
+            examPoint: "Part A / Reading (play games at recess)",
+            sentence: "Children play games in the playground at recess."
+          }
+        ]
+      },
+      {
+        unitId: "u3_food",
+        unitTitle: "【範圍三】Unit 2: Food & Market Day（食物與蔬果 - 注意可數/不可數）",
+        items: [
+          {
+            id: "u3_1",
+            word: "tomato",
+            forms: "a tomato / tomatoes",
+            zh: "番茄",
+            examPoint: "複數加 -es (tomatoes 切勿漏 e)",
+            sentence: "There are two red tomatoes in the basket."
+          },
+          {
+            id: "u3_2",
+            word: "peas",
+            forms: "peas",
+            zh: "豌豆",
+            examPoint: "常用複數形態 (There are some peas...)",
+            sentence: "There are some sweet green peas on the plate."
+          },
+          {
+            id: "u3_3",
+            word: "sausage",
+            forms: "a sausage / sausages",
+            zh: "香腸",
+            examPoint: "可數名詞 (複數直接加 -s)",
+            sentence: "Those sausages look nice and tasty!"
+          },
+          {
+            id: "u3_4",
+            word: "chicken",
+            forms: "chicken",
+            zh: "雞肉",
+            examPoint: "不可數名詞 (There is some chicken / 勿加 s)",
+            sentence: "There is some chicken and rice for dinner."
+          },
+          {
+            id: "u3_5",
+            word: "rice",
+            forms: "rice",
+            zh: "米飯",
+            examPoint: "不可數名詞 (用 There is / some rice)",
+            sentence: "We eat rice every day."
+          },
+          {
+            id: "u3_6",
+            word: "eggplant",
+            forms: "an eggplant / eggplants",
+            zh: "茄子",
+            examPoint: "冠詞陷阱: 母音開頭用 an eggplant",
+            sentence: "Mum bought an eggplant from the market."
+          },
+          {
+            id: "u3_7",
+            word: "corn",
+            forms: "corn",
+            zh: "粟米 / 玉米",
+            examPoint: "不可數名詞 (There is some corn)",
+            sentence: "There is some yellow corn in the bowl."
+          },
+          {
+            id: "u3_8",
+            word: "pineapple",
+            forms: "a pineapple / pineapples",
+            zh: "菠蘿 / 鳳梨",
+            examPoint: "可數名詞 (a pineapple / two pineapples)",
+            sentence: "This pineapple is very sweet and juicy."
+          },
+          {
+            id: "u3_9",
+            word: "cupcake",
+            forms: "a cupcake / cupcakes",
+            zh: "紙杯蛋糕",
+            examPoint: "可數名詞 (Look! Cupcakes with cherries)",
+            sentence: "Look! Cupcakes with cherries on top!"
+          },
+          {
+            id: "u3_10",
+            word: "cherry",
+            forms: "a cherry / cherries",
+            zh: "車厘子 / 櫻桃",
+            examPoint: "去 y 變 -ies (cherry ➔ cherries)",
+            sentence: "There are three red cherries on the cupcake."
+          },
+          {
+            id: "u3_11",
+            word: "fruit",
+            forms: "fruit",
+            zh: "水果 (集合名詞)",
+            examPoint: "通常作不可數 (There is fresh fruit...)",
+            sentence: "Eating fresh fruit is good for our health."
+          },
+          {
+            id: "u3_12",
+            word: "spinach",
+            forms: "spinach",
+            zh: "菠菜",
+            examPoint: "不可數名詞 (Would you like some spinach?)",
+            sentence: "Would you like some spinach? Yes, please!"
+          }
+        ]
+      },
+      {
+        unitId: "u4_questions",
+        unitTitle: "【範圍四】Question Words（特殊疑問詞與信號反射）",
+        items: [
+          {
+            id: "u4_1",
+            word: "Who",
+            forms: "Question Word (Person)",
+            zh: "誰 (人)",
+            examPoint: "答句信號: 人名、親屬稱謂 (My brother, Miss Chan)",
+            sentence: "— Who is in the gym? — My brother."
+          },
+          {
+            id: "u4_2",
+            word: "What",
+            forms: "Question Word (Thing / Action)",
+            zh: "甚麼 (事物/活動)",
+            examPoint: "答句信號: 具體物件、食物 (Rice and chicken)",
+            sentence: "— What do you have for lunch? — Rice and chicken."
+          },
+          {
+            id: "u4_3",
+            word: "Where",
+            forms: "Question Word (Place / Location)",
+            zh: "哪裡 (地點/位置)",
+            examPoint: "答句信號: 介詞短語 (In the cafeteria, On the desk)",
+            sentence: "— Where is the tablet? — On the desk."
+          },
+          {
+            id: "u4_4",
+            word: "When",
+            forms: "Question Word (Time)",
+            zh: "何時 (時間)",
+            examPoint: "答句信號: 時間點、時刻 (At 8:15 a.m., On Monday)",
+            sentence: "— When does the lesson start? — At 8:15 a.m."
+          },
+          {
+            id: "u4_5",
+            word: "Whose",
+            forms: "Question Word (Possession)",
+            zh: "誰的 (所有權)",
+            examPoint: "答句信號: 所有格 's (Jane's, My teacher's)",
+            sentence: "— Whose cell phone is that? — Jane's."
+          },
+          {
+            id: "u4_6",
+            word: "How many",
+            forms: "Question Word (Countable quantity)",
+            zh: "多少 (可數名詞數量)",
+            examPoint: "答句信號: 具體數字 (Two, Five, Ten)",
+            sentence: "— How many tomatoes are there? — Five."
+          },
+          {
+            id: "u4_7",
+            word: "How much",
+            forms: "Question Word (Price / Uncountable)",
+            zh: "多少錢 (價錢金額)",
+            examPoint: "答句信號: 金額貨幣 ($50, Fifty dollars)",
+            sentence: "— How much is the alarm clock? — Fifty dollars."
+          }
+        ]
+      },
+      {
+        unitId: "u5_plurals",
+        unitTitle: "【範圍五】Irregular Plurals（NRU Unit 1 不規則複數名詞）",
+        items: [
+          {
+            id: "u5_1",
+            word: "a man ➔ men",
+            forms: "Singular ➔ Plural",
+            zh: "男人",
+            examPoint: "a 變 e，切勿寫 mans",
+            sentence: "One man is walking, but three men are running."
+          },
+          {
+            id: "u5_2",
+            word: "a woman ➔ women",
+            forms: "Singular ➔ Plural",
+            zh: "女人",
+            examPoint: "a 變 e，讀音改變 (women)，切勿加 -s",
+            sentence: "A woman is singing, and two women are dancing."
+          },
+          {
+            id: "u5_3",
+            word: "a child ➔ children",
+            forms: "Singular ➔ Plural",
+            zh: "小童 / 兒童",
+            examPoint: "尾巴加 -ren，不可寫 childrens 或 childs",
+            sentence: "One child is eating, and five children are playing."
+          },
+          {
+            id: "u5_4",
+            word: "a foot ➔ feet",
+            forms: "Singular ➔ Plural",
+            zh: "腳",
+            examPoint: "雙 o 變雙 e，不可寫 foots",
+            sentence: "I have two feet and ten toes."
+          },
+          {
+            id: "u5_5",
+            word: "a tooth ➔ teeth",
+            forms: "Singular ➔ Plural",
+            zh: "牙齒",
+            examPoint: "雙 o 變雙 e，不可寫 tooths",
+            sentence: "Brush your teeth every morning and evening."
+          },
+          {
+            id: "u5_6",
+            word: "a mouse ➔ mice",
+            forms: "Singular ➔ Plural",
+            zh: "老鼠",
+            examPoint: "特殊變形為 mice，勿加 -s",
+            sentence: "The cat chased two little mice under the table."
+          },
+          {
+            id: "u5_7",
+            word: "a sheep ➔ sheep",
+            forms: "Singular ➔ Plural",
+            zh: "綿羊",
+            examPoint: "單複數同形！絕對不可加 -s (ten sheep)",
+            sentence: "There is one sheep on the hill, and there are ten sheep in the field."
+          },
+          {
+            id: "u5_8",
+            word: "a fish ➔ fish",
+            forms: "Singular ➔ Plural",
+            zh: "魚",
+            examPoint: "單複數同形！同種魚群不可加 -s (five fish)",
+            sentence: "Look! There are five colourful fish in the pond."
+          }
+        ]
+      }
+    ];
+
+    // 2. 本地儲存與狀態管理
+    const STORAGE_KEY = "p2_vocab_unfamiliar";
+    let unfamiliarList = new Set();
+    let currentFilterMode = "all"; // "all" 或 "unfamiliar"
+
+    function loadFromStorage() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const arr = JSON.parse(stored);
+          if (Array.isArray(arr)) {
+            unfamiliarList = new Set(arr);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load from localStorage:", e);
+      }
+    }
+
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...unfamiliarList]));
+      } catch (e) {
+        console.warn("Could not save to localStorage:", e);
+      }
+    }
+
+    // 3. 語音合成 TTS
+    function playSpeech(text, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      if (!("speechSynthesis" in window)) {
+        alert("抱歉，您的裝置或瀏覽器不支援原生語音發音 (Web Speech API)。");
+        return;
+      }
+
+      window.speechSynthesis.cancel(); // 停止先前的發音
+
+      // 清理特殊符號以使發音流暢自然
+      const cleanText = text.replace(/➔/g, " to ").replace(/—/g, "").replace(/\//g, " or ");
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = "en-US";
+      utterance.rate = 0.85; // 專為初小學生設定的 0.85 倍速
+      utterance.pitch = 1.0;
+
+      // 優先選取英語高質量語音庫
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => 
+        (v.lang.startsWith("en-US") || v.lang.startsWith("en-GB")) && 
+        (v.name.includes("Samantha") || v.name.includes("Daniel") || v.name.includes("Karen") || v.name.includes("Google") || v.name.includes("Natural"))
+      ) || voices.find(v => v.lang.startsWith("en"));
+
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // 預加載語音清單 (兼容 Safari & Chrome)
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+
+    // 4. 畫面渲染邏輯
+    function renderApp() {
+      const container = document.getElementById("unitsContainer");
+      container.innerHTML = "";
+
+      let totalVocabCount = 0;
+
+      VOCAB_DATA.forEach(section => {
+        totalVocabCount += section.items.length;
+
+        const sectionEl = document.createElement("section");
+        sectionEl.className = "unit-section";
+        sectionEl.id = `section_${section.unitId}`;
+
+        // 單元橫幅 (Word Ribbon 風格)
+        const ribbonEl = document.createElement("div");
+        ribbonEl.className = "unit-ribbon";
+        ribbonEl.innerHTML = `
+          <div class="unit-ribbon-title">
+            <span>📖</span>
+            <span>${escapeHtml(section.unitTitle)}</span>
+          </div>
+          <span class="unit-ribbon-count">${section.items.length} 題</span>
+        `;
+        sectionEl.appendChild(ribbonEl);
+
+        // 單元列表容器
+        const listEl = document.createElement("div");
+        listEl.className = "vocab-list";
+
+        let sectionVisibleItems = 0;
+
+        section.items.forEach(item => {
+          const isUnfamiliar = unfamiliarList.has(item.id);
+          const isVisible = (currentFilterMode === "all") || (currentFilterMode === "unfamiliar" && isUnfamiliar);
+
+          if (isVisible) {
+            sectionVisibleItems++;
+          }
+
+          const card = document.createElement("div");
+          card.className = `vocab-card ${isUnfamiliar ? "is-unfamiliar" : ""}`;
+          card.id = `card_${item.id}`;
+          card.style.display = isVisible ? "block" : "none";
+
+          card.innerHTML = `
+            <div class="card-top">
+              <div class="word-main-group">
+                <div class="word-row">
+                  <span class="word-title">${escapeHtml(item.word)}</span>
+                  <span class="word-forms">${escapeHtml(item.forms)}</span>
+                </div>
+                <div class="word-zh">${escapeHtml(item.zh)}</div>
+                <div class="exam-point-tag">
+                  <span class="exam-icon">⚠️</span>
+                  <span><strong>考點：</strong>${escapeHtml(item.examPoint)}</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button type="button" class="btn-action btn-tts" onclick="playSpeech('${escapeJsString(item.word)}', event)" title="聆聽生字發音">
+                  <span class="icon-speaker">🔊</span>
+                  <span>讀字</span>
+                </button>
+                <button type="button" class="btn-action btn-star ${isUnfamiliar ? "marked" : ""}" onclick="toggleUnfamiliar('${item.id}', event)" title="標記為唔識 / 待溫生字">
+                  <span class="star-icon">${isUnfamiliar ? "⭐️" : "☆"}</span>
+                  <span>${isUnfamiliar ? "待溫" : "掌握"}</span>
+                </button>
+              </div>
+            </div>
+            <div class="sentence-box">
+              <div class="sentence-text">
+                <strong>例句 / 答句：</strong>${escapeHtml(item.sentence)}
+              </div>
+              <button type="button" class="sentence-btn-tts" onclick="playSpeech('${escapeJsString(item.sentence)}', event)" title="聆聽例句讀音">
+                🔊
+              </button>
+            </div>
+          `;
+
+          listEl.appendChild(card);
+        });
+
+        sectionEl.appendChild(listEl);
+
+        // 在「只睇唔識」模式下，若該單元無標記生字，自動隱藏單元橫幅
+        if (sectionVisibleItems === 0 && currentFilterMode === "unfamiliar") {
+          sectionEl.classList.add("is-empty");
+        } else {
+          sectionEl.classList.remove("is-empty");
+        }
+
+        container.appendChild(sectionEl);
+      });
+
+      // 更新頂部固定狀態列數據
+      document.getElementById("totalCount").textContent = totalVocabCount;
+      document.getElementById("unfamiliarCount").textContent = unfamiliarList.size;
+
+      // 檢查空狀態顯示
+      const emptyState = document.getElementById("emptyState");
+      if (currentFilterMode === "unfamiliar" && unfamiliarList.size === 0) {
+        emptyState.classList.add("show");
+      } else {
+        emptyState.classList.remove("show");
+      }
+    }
+
+    // 5. 標記 / 取消標記操作
+    function toggleUnfamiliar(id, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+
+      if (unfamiliarList.has(id)) {
+        unfamiliarList.delete(id);
+      } else {
+        unfamiliarList.add(id);
+      }
+
+      saveToStorage();
+      renderApp();
+    }
+
+    // 6. 重設清空標記
+    function resetAllMarks() {
+      if (unfamiliarList.size === 0) {
+        alert("現時沒有任何待溫生字標記。");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "確定要清空所有已標記的「待溫生字」嗎？\n清空後將重設所有複習進度。"
+      );
+
+      if (confirmed) {
+        unfamiliarList.clear();
+        saveToStorage();
+        renderApp();
+      }
+    }
+
+    // 7. 篩選模式切換
+    function setFilterMode(mode) {
+      currentFilterMode = mode;
+      const btnAll = document.getElementById("filterAll");
+      const btnUnfamiliar = document.getElementById("filterUnfamiliar");
+
+      if (mode === "all") {
+        btnAll.classList.add("active");
+        btnUnfamiliar.classList.remove("active", "unfamiliar-mode");
+      } else {
+        btnAll.classList.remove("active");
+        btnUnfamiliar.classList.add("active", "unfamiliar-mode");
+      }
+
+      renderApp();
+    }
+
+    // 8. 輔助函數 (防 XSS)
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeJsString(str) {
+      if (!str) return "";
+      return str.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, " ");
+    }
+
+    // 9. 事件綁定與初始化
+    document.addEventListener("DOMContentLoaded", () => {
+      loadFromStorage();
+
+      document.getElementById("filterAll").addEventListener("click", () => setFilterMode("all"));
+      document.getElementById("filterUnfamiliar").addEventListener("click", () => setFilterMode("unfamiliar"));
+      document.getElementById("btnReset").addEventListener("click", resetAllMarks);
+      document.getElementById("btnReturnAll").addEventListener("click", () => setFilterMode("all"));
+
+      renderApp();
+    });
+  </script>
+</body>
+</html>
