@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>減脂一煲熟晚餐時間表 & 智能助手</title>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --accent: #f59e0b;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --tag-fast: #3b82f6;
+      --tag-full: #8b5cf6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans TC", sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 16px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 0 16px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    /* 模式切換按鈕 */
+    .tab-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+      background: #090d16;
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 12px 10px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tab-btn span.badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    .tab-btn.active.fast {
+      background: var(--tag-fast);
+      color: #fff;
+    }
+
+    .tab-btn.active.full {
+      background: var(--tag-full);
+      color: #fff;
+    }
+
+    .tab-btn.active span.badge {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    /* 煮食計時面板 */
+    .timer-panel {
+      background: linear-gradient(135deg, #1e293b, #111827);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .timer-display {
+      font-size: 2.8rem;
+      font-weight: 800;
+      font-family: monospace;
+      color: var(--primary);
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .timer-controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #0f172a;
+    }
+    .btn-primary:hover { background: var(--primary-dark); color: #fff; }
+
+    .btn-reset {
+      background: #334155;
+      color: #cbd5e1;
+    }
+    .btn-reset:hover { background: #475569; }
+
+    /* 食材清單 */
+    .ingredients-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .ingredients-box h3 {
+      font-size: 1rem;
+      color: var(--accent);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ingredients-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+
+    .ing-item {
+      background: #0f172a;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .ing-item strong { color: #fff; display: block; margin-bottom: 2px; }
+    .ing-item span { color: var(--text-muted); font-size: 0.75rem; }
+
+    /* 時間線卡片 */
+    .timeline {
+      position: relative;
+      margin-top: 10px;
+      padding-left: 10px;
+    }
+
+    .step-card {
+      position: relative;
+      padding-left: 36px;
+      padding-bottom: 24px;
+      border-left: 2px dashed #334155;
+    }
+
+    .step-card:last-child {
+      border-left: 2px solid transparent;
+      padding-bottom: 10px;
+    }
+
+    .step-dot {
+      position: absolute;
+      left: -9px;
+      top: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 3px solid var(--bg);
+    }
+
+    .step-card.fast-mode .step-dot { background: var(--tag-fast); }
+    .step-card.full-mode .step-dot { background: var(--tag-full); }
+
+    .step-content {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+
+    .step-content:hover {
+      border-color: #475569;
+    }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .step-time {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .step-tag {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #334155;
+      color: #cbd5e1;
+    }
+
+    .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .step-tip {
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 3px solid var(--accent);
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: #fbbf24;
+    }
+
+    .completed .step-content {
+      opacity: 0.5;
+      background: #111827;
+      border-color: #1e293b;
+    }
+
+    .completed .step-title {
+      text-decoration: line-through;
+    }
+
+    /* 關鍵細節備忘 */
+    .tips-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 24px;
+    }
+
+    .tips-section h3 {
+      font-size: 1rem;
+      color: #38bdf8;
+      margin-bottom: 12px;
+    }
+
+    .tips-list {
+      list-style: none;
+      font-size: 0.88rem;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tips-list li {
+      position: relative;
+      padding-left: 20px;
+    }
+
+    .tips-list li::before {
+      content: "✔";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 30px;
+      padding-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🍲 減脂一煲熟晚餐時間表</h1>
+    <p>單隻煲無壓力烹調 ｜ 3雞髀 + 1蛋 + 1薯仔 + 1番茄 + 唐生菜</p>
+  </header>
+
+  <!-- 模式切換 -->
+  <div class="tab-switch">
+    <button class="tab-btn active fast" id="btn-fast" onclick="switchMode('fast')">
+      ⚡ 中午有預備
+      <span class="badge">晚上 15 分鐘極速</span>
+    </button>
+    <button class="tab-btn full" id="btn-full" onclick="switchMode('full')">
+      ⏱️ 中午無預備
+      <span class="badge">晚上 40 分鐘完整一煲</span>
+    </button>
+  </div>
+
+  <!-- 計時工具 -->
+  <div class="timer-panel">
+    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">烹調正數計時器（點擊步驟可切換打勾）</div>
+    <div class="timer-display" id="timer">00:00</div>
+    <div class="timer-controls">
+      <button class="btn btn-primary" id="start-btn" onclick="toggleTimer()">開始煮食</button>
+      <button class="btn btn-reset" onclick="resetTimer()">重設</button>
+    </div>
+  </div>
+
+  <!-- 食材核對 -->
+  <div class="ingredients-box">
+    <h3>📋 今晚食材清單</h3>
+    <div class="ingredients-grid">
+      <div class="ing-item">
+        <strong>冷藏雞髀 3 隻</strong>
+        <span>已帶切口／撕 2 隻皮</span>
+      </div>
+      <div class="ing-item">
+        <strong>帶皮薯仔 1 個</strong>
+        <span>刷淨連皮（抗性澱粉）</span>
+      </div>
+      <div class="ing-item">
+        <strong>大番茄 1 個</strong>
+        <span>厚切大塊（爽口不煮爛）</span>
+      </div>
+      <div class="ing-item">
+        <strong>唐生菜 1 棵</strong>
+        <span>分葉洗淨（分梗葉燙）</span>
+      </div>
+      <div class="ing-item">
+        <strong>雞蛋 1 隻</strong>
+        <span>中火烚熟</span>
+      </div>
+      <div class="ing-item">
+        <strong>出盤生淋油</strong>
+        <span>特級初榨橄欖油 1 茶匙</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 內容區：中午有準備（15分鐘極速版） -->
+  <div id="section-fast">
+    <div style="margin-bottom: 12px; font-size: 0.85rem; color: #38bdf8;">
+      💡 <strong>中午先做好</strong>：冷水下洗淨帶皮薯仔與雞蛋同煮。滾 7 分撈蛋泡水剝殼；薯仔滾 18 分至穿透，放涼冷藏（生成抗性澱粉，降GI又省時間）。
+    </div>
+
+    <div class="timeline">
+      <div class="step-card fast-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">00:00 - 05:00</span>
+            <span class="step-tag">備料 & 煲水</span>
+          </div>
+          <div class="step-title">爐頭大火燒半煲水</div>
+          <div class="step-desc">煲內注入剛好淹過食材的水量，開大火燒滾。期間從雪櫃取出熟薯仔切厚塊、熟蛋切半擺盤；番茄切 4 大塊、唐生菜洗淨掰開。</div>
+        </div>
+      </div>
+
+      <div class="step-card fast-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">05:00 - 05:30</span>
+            <span class="step-tag">蔬菜輪 (1/2)</span>
+          </div>
+          <div class="step-title">下切塊番茄燙 30 秒撈起</div>
+          <div class="step-desc">水大滾後放入番茄大塊，燙 30 秒表面微捲立即撈起裝盤。</div>
+          <div class="step-tip">番茄保持整塊脆嫩多汁，餘熱已能激活茄紅素。</div>
+        </div>
+      </div>
+
+      <div class="step-card fast-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">05:30 - 06:15</span>
+            <span class="step-tag">蔬菜輪 (2/2)</span>
+          </div>
+          <div class="step-title">白灼唐生菜（先梗後葉）</div>
+          <div class="step-desc">手持菜葉，先將厚菜梗浸入沸水燙 15 秒；隨後整棵按入水中續燙 15 秒，快速撈起瀝乾鋪在盤底。</div>
+          <div class="step-tip">此時蔬菜盤（唐生菜、番茄、熟薯仔、熟蛋）已全部擺好！</div>
+        </div>
+      </div>
+
+      <div class="step-card fast-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">06:30 - 15:00</span>
+            <span class="step-tag">滾水下雞</span>
+          </div>
+          <div class="step-title">下劃開雞髀，中火滾煮 8–9 分鐘</div>
+          <div class="step-desc">直接下入依然乾淨的滾水鍋中。大火再次滾起時用湯匙撇清表面灰白浮沫，轉中火滾煮 8 分鐘。</div>
+          <div class="step-tip">雞肉本身帶切口，熱水直接滲入骨縫，8–9 分鐘即完全熟透多汁。</div>
+        </div>
+      </div>
+
+      <div class="step-card fast-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">15:00</span>
+            <span class="step-tag">調味開餐</span>
+          </div>
+          <div class="step-title">夾出雞髀裝盤，生淋橄欖油</div>
+          <div class="step-desc">撕去其中 2 隻雞髀的皮（留 1 隻連皮）。在熱蔬菜、番茄與帶皮薯仔上均勻淋上 1 茶匙特級初榨橄欖油、海鹽及黑胡椒。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 內容區：中午無準備（40分鐘一煲全煮版） -->
+  <div id="section-full" style="display: none;">
+    <div style="margin-bottom: 12px; font-size: 0.85rem; color: #a78bfa;">
+      💡 <strong>單煲雙輪原則</strong>：第一輪冷水起步煮熟蔬果與雞蛋；第二輪換水專心慢煮雞肉去血水，湯清無雜質。
+    </div>
+
+    <div class="timeline">
+      <div class="step-card full-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">00:00 - 05:00</span>
+            <span class="step-tag">冷水起步</span>
+          </div>
+          <div class="step-title">帶皮薯仔塊 + 生雞蛋 冷水入鍋</div>
+          <div class="step-desc">薯仔洗淨切 3cm 塊，與雞蛋一同放入冷水鍋，加 1 茶匙鹽開大火加熱。冷水起步不易裂蛋。</div>
+        </div>
+      </div>
+
+      <div class="step-card full-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">05:00 - 12:00</span>
+            <span class="step-tag">轉微滾</span>
+          </div>
+          <div class="step-title">大滾後轉中小火，煮至 12 分鐘撈蛋</div>
+          <div class="step-desc">水滾轉微滾防止蛋殼撞碎。計時至 12 分鐘（滾後 7 分鐘）撈起雞蛋，立即浸入冷水，稍後極易剝殼。</div>
+        </div>
+      </div>
+
+      <div class="step-card full-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">17:00 - 18:00</span>
+            <span class="step-tag">下番茄</span>
+          </div>
+          <div class="step-title">放入切塊番茄燙 60 秒</div>
+          <div class="step-desc">筷子戳薯仔微有阻力時放入切塊番茄，加熱 60 秒後，將薯仔與番茄一同撈起裝盤。</div>
+        </div>
+      </div>
+
+      <div class="step-card full-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">18:30 - 19:00</span>
+            <span class="step-tag">灼唐生菜</span>
+          </div>
+          <div class="step-title">大火白灼唐生菜，倒水換鍋</div>
+          <div class="step-desc">轉大火滾水下唐生菜（梗 15 秒、葉 15 秒）撈起鋪底。倒掉第一輪煮菜水，水龍頭沖洗煲底。</div>
+        </div>
+      </div>
+
+      <div class="step-card full-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">21:00 - 35:00</span>
+            <span class="step-tag">第二輪：雞髀</span>
+          </div>
+          <div class="step-title">重新注冷水下雞髀，撇沫慢煮 10–12 分</div>
+          <div class="step-desc">冷水下切開的雞髀。大滾徹底撈淨浮沫，轉極微弱小火慢煮 10–12 分鐘，熄火加蓋燜焗 5 分鐘出鍋。</div>
+        </div>
+      </div>
+
+      <div class="step-card full-mode" onclick="toggleStep(this)">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-header">
+            <span class="step-time">40:00</span>
+            <span class="step-tag">組裝開餐</span>
+          </div>
+          <div class="step-title">去皮組裝，生淋橄欖油</div>
+          <div class="step-desc">撕掉 2 隻雞髀皮裝盤。熱菜淋上 1 茶匙特級初榨橄欖油 ＋ 海鹽 ＋ 黑胡椒碎，剝蛋開餐！</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 調味與核心要點 -->
+  <div class="tips-section">
+    <h3>⭐ 男士減脂核心細節備忘</h3>
+    <ul class="tips-list">
+      <li><strong>雞皮吃一去二</strong>：撕去 2 隻雞髀的皮，淨慳約 80–100 kcal 純飽和脂肪，蛋白質絲毫無減。</li>
+      <li><strong>生淋橄欖油</strong>：番茄出鍋趁熱生淋 1 茶匙 EVOO，完整保留多酚香氣，同時激發脂溶性茄紅素吸收。</li>
+      <li><strong>唐生菜分段燙</strong>：先浸厚梗 15 秒再全下 15 秒，爽脆無青澀苦味。</li>
+      <li><strong>全日微量搭配</strong>：下午茶已飲高鈣奶（375mg 鈣）+ 蛋，晚餐隨餐食綜合維他命，營養全面封頂。</li>
+    </ul>
+  </div>
+
+  <footer>
+    Designed for Daily Fat-Loss & Meal Prep Workflow
+  </footer>
+
+  <script>
+    let mode = 'fast';
+    let timerInterval = null;
+    let seconds = 0;
+    let isRunning = false;
+
+    function switchMode(newMode) {
+      mode = newMode;
+      document.getElementById('btn-fast').classList.toggle('active', mode === 'fast');
+      document.getElementById('btn-full').classList.toggle('active', mode === 'full');
+      document.getElementById('section-fast').style.display = mode === 'fast' ? 'block' : 'none';
+      document.getElementById('section-full').style.display = mode === 'full' ? 'block' : 'none';
+      resetTimer();
+    }
+
+    function toggleTimer() {
+      const btn = document.getElementById('start-btn');
+      if (isRunning) {
+        clearInterval(timerInterval);
+        btn.textContent = '繼續計時';
+        btn.style.background = '#f59e0b';
+        isRunning = false;
+      } else {
+        timerInterval = setInterval(() => {
+          seconds++;
+          const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+          const secs = String(seconds % 60).padStart(2, '0');
+          document.getElementById('timer').textContent = `${mins}:${secs}`;
+        }, 1000);
+        btn.textContent = '暫停';
+        btn.style.background = '#ef4444';
+        isRunning = true;
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      seconds = 0;
+      isRunning = false;
+      document.getElementById('timer').textContent = '00:00';
+      const btn = document.getElementById('start-btn');
+      btn.textContent = '開始煮食';
+      btn.style.background = 'var(--primary)';
+    }
+
+    function toggleStep(card) {
+      card.classList.toggle('completed');
+    }
+  </script>
+</body>
+</html>
