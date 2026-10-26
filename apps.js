@@ -6,16 +6,26 @@ const apps = [
       {
         title: "英語單字",
         url: "https://lamfungjerry.github.io/word/",
-        icon: "icons/app1.png"
+        icon: "icons/word.png"
       },
       {
         title: "英語讀默",
         url: "https://lamfungjerry.github.io/dictation/",
-        icon: "icons/app2.png"
+        icon: "icons/dictation.png"
       },
       {
         title: "長文讀默",
         url: "https://lamfungjerry.github.io/eng-dict/",
-        icon: "icons/app3.png"
+        icon: "icons/eng-dict.png"
+      },
+      {
+        title: "排更統計",
+        url: "https://lamfungjerry.github.io/roster/",
+        icon: "icons/roster.png"
+      },
+      {
+        title: "輔食輔助",
+        url: "https://lamfungjerry.github.io/gas/dinner_schedule.html",
+        icon: "icons/dinner_schedule.png"
       }
 ];
