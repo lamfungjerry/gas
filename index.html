@@ -48,30 +48,34 @@
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
       min-height: 100vh;
       min-height: 100dvh;
+      margin: 0;
       background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
       background-attachment: fixed;
       background-size: cover;
       background-position: center;
       color: #ffffff;
-      
-      /* 避開 iPhone 瀏海與底部導覽條 */
-      padding-top: calc(env(safe-area-inset-top) + 32px);
-      padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
-      padding-left: calc(env(safe-area-inset-left) + 20px);
-      padding-right: calc(env(safe-area-inset-right) + 20px);
-      
-      display: flex;
-      justify-content: center;
       user-select: none;
       
       /* 確保 App 數量多時，桌面可以順暢上下碌 */
       overflow-y: auto;
+      overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
+      
+      /* 🔥 刪除咗 display: flex 同 padding，交俾入面個 container 處理 */
     }
 
     .desktop-container {
       width: 100%;
       max-width: 1024px;
+      /* 🔥 改用 margin: 0 auto 嚟置中，防止 iOS 突然計錯闊度 */
+      margin: 0 auto; 
+      
+      /* 🔥 將避開 iPhone 瀏海與底部導覽條嘅設定移入嚟呢度 */
+      padding-top: calc(env(safe-area-inset-top) + 32px);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+      padding-left: calc(env(safe-area-inset-left) + 20px);
+      padding-right: calc(env(safe-area-inset-right) + 20px);
+      box-sizing: border-box;
     }
 
     .app-grid {
