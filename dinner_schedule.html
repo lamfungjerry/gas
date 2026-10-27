@@ -341,7 +341,7 @@
 <body>
 
   <header>
-    <h1>🍲 減脂一煲熟晚餐時間表</h1>
+    <h1 onclick="safeBack()">🍲 減脂一煲熟晚餐時間表</h1>
     <p>單隻煲無壓力烹調 ｜ 3雞髀 + 1蛋 + 1薯仔 + 1番茄 + 唐生菜</p>
   </header>
 
@@ -613,6 +613,13 @@
 
     function toggleStep(card) {
       card.classList.toggle('completed');
+    }
+
+    function safeBack() {
+      // 檢查上一頁是否屬於同一個網站
+      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+        history.back();
+      }
     }
   </script>
 </body>
