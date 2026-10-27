@@ -15,7 +15,7 @@ const apps = [
       },
       {
         title: "長文讀默",
-        url: "https://lamfungjerry.github.io/eng-dict/",
+        url: "https://lamfungjerry.github.io/long-dict/",
         icon: "icons/eng-dict.png"
       },
       {
