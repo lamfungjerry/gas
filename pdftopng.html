@@ -2,12 +2,17 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF to PNG 轉換器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PDF 轉 PNG 工具</title>
 
-  <!-- 引入 Mozilla PDF.js 插件 -->
+  <!-- Apple Web App 設定 -->
+  <meta name="apple-mobile-web-app-title" content="PDF 轉 PNG">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- 第三方插件 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <!-- 引入 JSZip 插件 (用於打包下載全部圖片) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
@@ -16,40 +21,93 @@
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
     body {
       background-color: #f3f4f6;
       color: #1f2937;
-      padding: 30px 16px;
+      padding: 20px 14px;
+      padding-top: calc(20px + env(safe-area-inset-top));
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      overflow-x: hidden;
     }
     .container {
-      max-width: 900px;
+      max-width: 800px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 28px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
     h1 {
-      font-size: 1.6rem;
-      margin-bottom: 8px;
+      font-size: 1.5rem;
+      margin-bottom: 6px;
       font-weight: 700;
     }
     p.desc {
       color: #6b7280;
-      margin-bottom: 24px;
-      font-size: 0.95rem;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
     }
+
+    /* 控制面板區塊 */
     .controls {
       display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-      margin-bottom: 24px;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 20px;
       padding: 16px;
       background: #f9fafb;
       border: 1px solid #e5e7eb;
-      border-radius: 8px;
+      border-radius: 12px;
+      width: 100%;
+    }
+
+    /* 自訂檔案選擇按鈕 (徹底解決 iOS 原生 input 爆版問題) */
+    .file-input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    .custom-file-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+      background-color: #ffffff;
+      border: 2px dashed #93c5fd;
+      border-radius: 10px;
+      color: #2563eb;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .file-name-text {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: #4b5563;
+      word-break: break-all;
+      text-align: center;
+    }
+
+    .options-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
     }
     .control-group {
       display: flex;
@@ -57,55 +115,65 @@
       gap: 8px;
       font-size: 0.9rem;
     }
-    select, input[type="file"] {
-      padding: 6px 12px;
+    select {
+      padding: 8px 12px;
       border: 1px solid #d1d5db;
-      border-radius: 6px;
+      border-radius: 8px;
       background: white;
       font-size: 0.9rem;
+      color: #1f2937;
     }
+
     .btn {
-      padding: 8px 16px;
+      padding: 10px 18px;
       background-color: #2563eb;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
       cursor: pointer;
-      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       transition: background-color 0.2s;
     }
-    .btn:hover:not(:disabled) {
-      background-color: #1d4ed8;
+    .btn:active {
+      opacity: 0.85;
     }
     .btn:disabled {
       background-color: #9ca3af;
       cursor: not-allowed;
     }
+
     #status {
-      font-weight: 500;
-      color: #4b5563;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #374151;
       margin-bottom: 16px;
     }
+
+    /* 預覽列表 */
     .preview-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
     }
     .page-card {
-      background: #fafafa;
+      background: #ffffff;
       border: 1px solid #e5e7eb;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .page-card img {
       max-width: 100%;
       height: auto;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
       background-color: #fff;
     }
     .page-info {
@@ -117,17 +185,18 @@
       font-size: 0.85rem;
       color: #4b5563;
     }
-    .download-btn {
+    .save-btn {
+      background-color: #eff6ff;
       color: #2563eb;
-      text-decoration: none;
-      font-weight: 600;
-      padding: 4px 8px;
-      border-radius: 4px;
       border: 1px solid #bfdbfe;
-      background: #eff6ff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
     }
-    .download-btn:hover {
-      background: #dbeafe;
+    .save-btn:active {
+      background-color: #dbeafe;
     }
   </style>
 </head>
@@ -135,22 +204,29 @@
 
   <div class="container">
     <h1>PDF 轉 PNG 工具</h1>
-    <p class="desc">純瀏覽器端處理，無需上傳伺服器，安全快速。</p>
+    <p class="desc">純前端處理，保護隱私；完美適配 iPhone 與 Safari 下載。</p>
 
     <div class="controls">
-      <input type="file" id="pdfFileInput" accept="application/pdf" />
-
-      <div class="control-group">
-        <label for="scaleSelect">解析度倍率：</label>
-        <select id="scaleSelect">
-          <option value="1">1.0x (標準)</option>
-          <option value="1.5">1.5x (推薦)</option>
-          <option value="2" selected>2.0x (高解析度 HD)</option>
-          <option value="3">3.0x (超高解析度)</option>
-        </select>
+      <!-- 修正後的響應式檔案選取區 -->
+      <div class="file-input-wrapper">
+        <div class="custom-file-btn">📂 點擊選擇 PDF 檔案</div>
+        <input type="file" id="pdfFileInput" accept="application/pdf" />
+        <span id="fileNameDisplay" class="file-name-text">未選擇任何檔案</span>
       </div>
 
-      <button id="downloadAllBtn" class="btn" disabled>打包下載全部 (ZIP)</button>
+      <div class="options-row">
+        <div class="control-group">
+          <label for="scaleSelect">解析度：</label>
+          <select id="scaleSelect">
+            <option value="1">1.0x (標準)</option>
+            <option value="1.5" selected>1.5x (推薦 / 適合 iPhone)</option>
+            <option value="2">2.0x (高解析度 HD)</option>
+            <option value="3">3.0x (超高解析度)</option>
+          </select>
+        </div>
+
+        <button id="downloadAllBtn" class="btn" disabled>打包下載全部 (ZIP)</button>
+      </div>
     </div>
 
     <div id="status"></div>
@@ -158,24 +234,56 @@
   </div>
 
   <script>
-    // 指定 PDF.js 的 Worker 檔案路徑
     pdfjsLib.GlobalWorkerOptions.workerSrc = 
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     const fileInput = document.getElementById('pdfFileInput');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
     const scaleSelect = document.getElementById('scaleSelect');
     const statusText = document.getElementById('status');
     const previewList = document.getElementById('previewList');
     const downloadAllBtn = document.getElementById('downloadAllBtn');
 
-    let currentImages = []; // 儲存產生的 PNG base64 資料
+    let currentImages = []; // 儲存產生的 Blob 資料
     let currentFileName = 'document';
+
+    // 解決 iOS 下載的核心函數 (優先調用 Web Share API，備用傳統下載)
+    async function saveOrShareFile(blob, filename, mimeType) {
+      const file = new File([blob], filename, { type: mimeType });
+
+      // 若支援原生分享 (如 iOS Safari)，直接叫起分享選單，可存入相簿或檔案 App
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: filename
+          });
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return; // 使用者主動取消分享
+          console.warn('原生分享失敗，嘗試傳統下載方式', err);
+        }
+      }
+
+      // 傳統電腦版或未支援 Share API 瀏覽器的下載方式
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
 
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       currentFileName = file.name.replace(/\.[^/.]+$/, "");
+      fileNameDisplay.textContent = `已選擇：${file.name}`;
       currentImages = [];
       previewList.innerHTML = '';
       downloadAllBtn.disabled = true;
@@ -189,38 +297,32 @@
         const totalPages = pdf.numPages;
 
         statusText.textContent = `共有 ${totalPages} 頁，開始轉換...`;
-
         const scale = parseFloat(scaleSelect.value);
 
-        // 依序處理每一頁
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
           statusText.textContent = `正在處理第 ${pageNum} / ${totalPages} 頁...`;
 
           const page = await pdf.getPage(pageNum);
           const viewport = page.getViewport({ scale: scale });
 
-          // 建立記憶體中的 Canvas 進行繪製
           const canvas = document.createElement('canvas');
           const context = canvas.getContext('2d');
           canvas.height = viewport.height;
           canvas.width = viewport.width;
 
-          const renderContext = {
+          await page.render({
             canvasContext: context,
             viewport: viewport
-          };
+          }).promise;
 
-          await page.render(renderContext).promise;
-
-          // 將 Canvas 輸出為 PNG Base64 Data URL
-          const imgData = canvas.toDataURL('image/png');
+          // 轉為 Blob 格式 (比 Base64 更節省 iPhone 記憶體)
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
           currentImages.push({
             page: pageNum,
-            dataUrl: imgData
+            blob: blob
           });
 
-          // 建立預覽與單獨下載按鈕
-          renderPageCard(pageNum, imgData);
+          renderPageCard(pageNum, blob);
         }
 
         statusText.textContent = `轉換完成！共轉換 ${totalPages} 頁。`;
@@ -232,13 +334,14 @@
       }
     });
 
-    // 建立畫面上單頁預覽卡片
-    function renderPageCard(pageNum, imgData) {
+    // 渲染卡片與「儲存/分享」按鈕
+    function renderPageCard(pageNum, blob) {
       const card = document.createElement('div');
       card.className = 'page-card';
 
+      const imgUrl = URL.createObjectURL(blob);
       const img = document.createElement('img');
-      img.src = imgData;
+      img.src = imgUrl;
       img.alt = `第 ${pageNum} 頁`;
 
       const info = document.createElement('div');
@@ -247,41 +350,35 @@
       const title = document.createElement('span');
       title.textContent = `第 ${pageNum} 頁`;
 
-      const dlLink = document.createElement('a');
-      dlLink.className = 'download-btn';
-      dlLink.href = imgData;
-      dlLink.download = `${currentFileName}_p${pageNum}.png`;
-      dlLink.textContent = '下載 PNG';
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'save-btn';
+      saveBtn.textContent = '儲存圖片';
+      saveBtn.addEventListener('click', () => {
+        saveOrShareFile(blob, `${currentFileName}_p${pageNum}.png`, 'image/png');
+      });
 
       info.appendChild(title);
-      info.appendChild(dlLink);
+      info.appendChild(saveBtn);
       card.appendChild(img);
       card.appendChild(info);
 
       previewList.appendChild(card);
     }
 
-    // 全部打包為 ZIP 下載
+    // 打包 ZIP 下載 / 分享
     downloadAllBtn.addEventListener('click', async () => {
       if (currentImages.length === 0) return;
 
       downloadAllBtn.disabled = true;
-      downloadAllBtn.textContent = '壓縮打包中...';
+      downloadAllBtn.textContent = '壓縮中...';
 
       const zip = new JSZip();
-
       currentImages.forEach((item) => {
-        // 去除 Base64 前綴 "data:image/png;base64,"
-        const base64Data = item.dataUrl.split(',')[1];
-        zip.file(`${currentFileName}_p${item.page}.png`, base64Data, { base64: true });
+        zip.file(`${currentFileName}_p${item.page}.png`, item.blob);
       });
 
-      const content = await zip.generateAsync({ type: 'blob' });
-      const downloadLink = document.createElement('a');
-      downloadLink.href = URL.createObjectURL(content);
-      downloadLink.download = `${currentFileName}_images.zip`;
-      downloadLink.click();
-      URL.revokeObjectURL(downloadLink.href);
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      await saveOrShareFile(zipBlob, `${currentFileName}_images.zip`, 'application/zip');
 
       downloadAllBtn.disabled = false;
       downloadAllBtn.textContent = '打包下載全部 (ZIP)';
