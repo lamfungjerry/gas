@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF to PNG 轉換器</title>
+
+  <!-- 引入 Mozilla PDF.js 插件 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- 引入 JSZip 插件 (用於打包下載全部圖片) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background-color: #f3f4f6;
+      color: #1f2937;
+      padding: 30px 16px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    p.desc {
+      color: #6b7280;
+      margin-bottom: 24px;
+      font-size: 0.95rem;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    select, input[type="file"] {
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: white;
+      font-size: 0.9rem;
+    }
+    .btn {
+      padding: 8px 16px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .btn:hover:not(:disabled) {
+      background-color: #1d4ed8;
+    }
+    .btn:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    #status {
+      font-weight: 500;
+      color: #4b5563;
+      margin-bottom: 16px;
+    }
+    .preview-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .page-card {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .page-card img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      background-color: #fff;
+    }
+    .page-info {
+      width: 100%;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #4b5563;
+    }
+    .download-btn {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+    }
+    .download-btn:hover {
+      background: #dbeafe;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>PDF 轉 PNG 工具</h1>
+    <p class="desc">純瀏覽器端處理，無需上傳伺服器，安全快速。</p>
+
+    <div class="controls">
+      <input type="file" id="pdfFileInput" accept="application/pdf" />
+
+      <div class="control-group">
+        <label for="scaleSelect">解析度倍率：</label>
+        <select id="scaleSelect">
+          <option value="1">1.0x (標準)</option>
+          <option value="1.5">1.5x (推薦)</option>
+          <option value="2" selected>2.0x (高解析度 HD)</option>
+          <option value="3">3.0x (超高解析度)</option>
+        </select>
+      </div>
+
+      <button id="downloadAllBtn" class="btn" disabled>打包下載全部 (ZIP)</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="previewList" class="preview-list"></div>
+  </div>
+
+  <script>
+    // 指定 PDF.js 的 Worker 檔案路徑
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    const fileInput = document.getElementById('pdfFileInput');
+    const scaleSelect = document.getElementById('scaleSelect');
+    const statusText = document.getElementById('status');
+    const previewList = document.getElementById('previewList');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+
+    let currentImages = []; // 儲存產生的 PNG base64 資料
+    let currentFileName = 'document';
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      currentFileName = file.name.replace(/\.[^/.]+$/, "");
+      currentImages = [];
+      previewList.innerHTML = '';
+      downloadAllBtn.disabled = true;
+
+      statusText.textContent = '讀取 PDF 檔案中...';
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        const totalPages = pdf.numPages;
+
+        statusText.textContent = `共有 ${totalPages} 頁，開始轉換...`;
+
+        const scale = parseFloat(scaleSelect.value);
+
+        // 依序處理每一頁
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          statusText.textContent = `正在處理第 ${pageNum} / ${totalPages} 頁...`;
+
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: scale });
+
+          // 建立記憶體中的 Canvas 進行繪製
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+          };
+
+          await page.render(renderContext).promise;
+
+          // 將 Canvas 輸出為 PNG Base64 Data URL
+          const imgData = canvas.toDataURL('image/png');
+          currentImages.push({
+            page: pageNum,
+            dataUrl: imgData
+          });
+
+          // 建立預覽與單獨下載按鈕
+          renderPageCard(pageNum, imgData);
+        }
+
+        statusText.textContent = `轉換完成！共轉換 ${totalPages} 頁。`;
+        downloadAllBtn.disabled = false;
+
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = '轉換失敗：' + (err.message || '檔案格式錯誤');
+      }
+    });
+
+    // 建立畫面上單頁預覽卡片
+    function renderPageCard(pageNum, imgData) {
+      const card = document.createElement('div');
+      card.className = 'page-card';
+
+      const img = document.createElement('img');
+      img.src = imgData;
+      img.alt = `第 ${pageNum} 頁`;
+
+      const info = document.createElement('div');
+      info.className = 'page-info';
+
+      const title = document.createElement('span');
+      title.textContent = `第 ${pageNum} 頁`;
+
+      const dlLink = document.createElement('a');
+      dlLink.className = 'download-btn';
+      dlLink.href = imgData;
+      dlLink.download = `${currentFileName}_p${pageNum}.png`;
+      dlLink.textContent = '下載 PNG';
+
+      info.appendChild(title);
+      info.appendChild(dlLink);
+      card.appendChild(img);
+      card.appendChild(info);
+
+      previewList.appendChild(card);
+    }
+
+    // 全部打包為 ZIP 下載
+    downloadAllBtn.addEventListener('click', async () => {
+      if (currentImages.length === 0) return;
+
+      downloadAllBtn.disabled = true;
+      downloadAllBtn.textContent = '壓縮打包中...';
+
+      const zip = new JSZip();
+
+      currentImages.forEach((item) => {
+        // 去除 Base64 前綴 "data:image/png;base64,"
+        const base64Data = item.dataUrl.split(',')[1];
+        zip.file(`${currentFileName}_p${item.page}.png`, base64Data, { base64: true });
+      });
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const downloadLink = document.createElement('a');
+      downloadLink.href = URL.createObjectURL(content);
+      downloadLink.download = `${currentFileName}_images.zip`;
+      downloadLink.click();
+      URL.revokeObjectURL(downloadLink.href);
+
+      downloadAllBtn.disabled = false;
+      downloadAllBtn.textContent = '打包下載全部 (ZIP)';
+    });
+  </script>
+</body>
+</html>
