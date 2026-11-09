@@ -203,7 +203,7 @@
 <body>
 
   <div class="container">
-    <h1>PDF 轉 PNG 工具</h1>
+    <h1 onclick="safeBack()">PDF 轉 PNG 工具</h1>
     <p class="desc">純前端處理，保護隱私；完美適配 iPhone 與 Safari 下載。</p>
 
     <div class="controls">
@@ -383,6 +383,13 @@
       downloadAllBtn.disabled = false;
       downloadAllBtn.textContent = '打包下載全部 (ZIP)';
     });
+
+    function safeBack() {
+      // 檢查上一頁是否屬於同一個網站
+      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+        history.back();
+      }
+    }
   </script>
 </body>
 </html>
