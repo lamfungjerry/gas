@@ -32,5 +32,10 @@ const apps = [
         title: "PDF>PNG",
         url: "https://lamfungjerry.github.io/gas/pdftopng.html",
         icon: "icons/pdftopng.png"
+      },
+      {
+        title: "PDF壓縮",
+        url: "https://lamfungjerry.github.io/gas/pdfcompress.html",
+        icon: "icons/pdfcompress.png"
       }
 ];
