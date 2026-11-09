@@ -11,9 +11,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <!-- 第三方插件 -->
+  <!-- 引入 Mozilla PDF.js 插件 (已移除 JSZip) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
     * {
@@ -26,44 +25,45 @@
     body {
       background-color: #f3f4f6;
       color: #1f2937;
-      padding: 20px 14px;
-      padding-top: calc(20px + env(safe-area-inset-top));
-      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      padding: 16px 14px;
+      padding-top: calc(16px + env(safe-area-inset-top));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
       overflow-x: hidden;
     }
     .container {
-      max-width: 800px;
+      max-width: 640px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 20px;
+      padding: 20px 16px;
       border-radius: 16px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.45rem;
       margin-bottom: 6px;
       font-weight: 700;
+      user-select: none;
     }
     p.desc {
       color: #6b7280;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
+      margin-bottom: 18px;
+      font-size: 0.88rem;
     }
 
-    /* 控制面板區塊 */
+    /* 控制面板 */
     .controls {
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      margin-bottom: 20px;
-      padding: 16px;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding: 14px;
       background: #f9fafb;
       border: 1px solid #e5e7eb;
       border-radius: 12px;
       width: 100%;
     }
 
-    /* 自訂檔案選擇按鈕 (徹底解決 iOS 原生 input 爆版問題) */
+    /* 響應式上傳按鈕 */
     .file-input-wrapper {
       position: relative;
       width: 100%;
@@ -83,20 +83,20 @@
       justify-content: center;
       gap: 8px;
       width: 100%;
-      padding: 12px;
+      min-height: 48px;
+      padding: 10px;
       background-color: #ffffff;
       border: 2px dashed #93c5fd;
       border-radius: 10px;
       color: #2563eb;
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       text-align: center;
-      transition: all 0.2s;
     }
     .file-name-text {
       display: block;
       margin-top: 6px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #4b5563;
       word-break: break-all;
       text-align: center;
@@ -104,116 +104,156 @@
 
     .options-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
     }
     .control-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
+      width: 100%;
     }
     select {
-      padding: 8px 12px;
+      flex: 1;
+      padding: 8px 10px;
       border: 1px solid #d1d5db;
       border-radius: 8px;
       background: white;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: #1f2937;
     }
 
-    .btn {
-      padding: 10px 18px;
+    #status {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    /* 單頁瀏覽器視窗 */
+    .viewer-card {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      gap: 14px;
+    }
+
+    /* 翻頁工具列 */
+    .pager-bar {
+      display: flex;
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .pager-btn {
+      min-width: 76px;
+      height: 40px;
+      padding: 0 12px;
+      background-color: #ffffff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .pager-btn:active {
+      background-color: #f3f4f6;
+    }
+    .pager-btn:disabled {
+      color: #9ca3af;
+      border-color: #e5e7eb;
+      cursor: not-allowed;
+      background-color: #fafafa;
+    }
+    .pager-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .page-select {
+      padding: 4px 8px;
+      font-size: 0.88rem;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+    }
+
+    /* 圖片預覽區 */
+    .preview-box {
+      width: 100%;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      padding: 4px;
+    }
+    .preview-box img {
+      width: 100%;
+      height: auto;
+      max-height: 65vh;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    /* 儲存按鈕 (專為 iPhone 設計) */
+    .action-bar {
+      width: 100%;
+    }
+    .save-current-btn {
+      width: 100%;
+      height: 46px;
       background-color: #2563eb;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
-      display: inline-flex;
+      display: flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
       transition: background-color 0.2s;
     }
-    .btn:active {
-      opacity: 0.85;
+    .save-current-btn:active {
+      background-color: #1d4ed8;
     }
-    .btn:disabled {
+    .save-current-btn:disabled {
       background-color: #9ca3af;
       cursor: not-allowed;
-    }
-
-    #status {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 16px;
-    }
-
-    /* 預覽列表 */
-    .preview-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px;
-    }
-    .page-card {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .page-card img {
-      max-width: 100%;
-      height: auto;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      background-color: #fff;
-    }
-    .page-info {
-      width: 100%;
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.85rem;
-      color: #4b5563;
-    }
-    .save-btn {
-      background-color: #eff6ff;
-      color: #2563eb;
-      border: 1px solid #bfdbfe;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-    .save-btn:active {
-      background-color: #dbeafe;
     }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1 onclick="safeBack()">PDF 轉 PNG 工具</h1>
-    <p class="desc">純前端處理，保護隱私；完美適配 iPhone 與 Safari 下載。</p>
+    <h1 onclick="safeBack()" style="cursor: pointer;">PDF 轉 PNG 工具</h1>
+    <p class="desc">單頁瀏覽模式：專為 iPhone 設計，點擊儲存可直接存入相簿。</p>
 
     <div class="controls">
-      <!-- 修正後的響應式檔案選取區 -->
+      <!-- 檔案選取 -->
       <div class="file-input-wrapper">
         <div class="custom-file-btn">📂 點擊選擇 PDF 檔案</div>
         <input type="file" id="pdfFileInput" accept="application/pdf" />
         <span id="fileNameDisplay" class="file-name-text">未選擇任何檔案</span>
       </div>
 
+      <!-- 解析度選項 (預設 2.0x) -->
       <div class="options-row">
         <div class="control-group">
           <label for="scaleSelect">解析度：</label>
@@ -224,16 +264,43 @@
             <option value="3">3.0x (超高解析度)</option>
           </select>
         </div>
-
-        <button id="downloadAllBtn" class="btn" disabled>打包下載全部 (ZIP)</button>
       </div>
     </div>
 
     <div id="status"></div>
-    <div id="previewList" class="preview-list"></div>
+
+    <!-- 單頁檢視器 -->
+    <div id="viewerCard" class="viewer-card">
+      <div class="pager-bar">
+        <button id="prevBtn" class="pager-btn">‹ 上一頁</button>
+        <div class="pager-indicator">
+          <span>第</span>
+          <select id="pageSelect" class="page-select"></select>
+          <span id="pageTotalText">/ 0 頁</span>
+        </div>
+        <button id="nextBtn" class="pager-btn">下一頁 ›</button>
+      </div>
+
+      <div class="preview-box">
+        <img id="pagePreviewImg" src="" alt="PDF 頁面預覽" />
+      </div>
+
+      <div class="action-bar">
+        <button id="savePageBtn" class="save-current-btn">
+          📥 儲存此頁 (PNG)
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
+    // 同源安全返回
+    function safeBack() {
+      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+        history.back();
+      }
+    }
+
     pdfjsLib.GlobalWorkerOptions.workerSrc = 
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
@@ -241,17 +308,30 @@
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     const scaleSelect = document.getElementById('scaleSelect');
     const statusText = document.getElementById('status');
-    const previewList = document.getElementById('previewList');
-    const downloadAllBtn = document.getElementById('downloadAllBtn');
 
-    let currentImages = []; // 儲存產生的 Blob 資料
+    const viewerCard = document.getElementById('viewerCard');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pageSelect = document.getElementById('pageSelect');
+    const pageTotalText = document.getElementById('pageTotalText');
+    const pagePreviewImg = document.getElementById('pagePreviewImg');
+    const savePageBtn = document.getElementById('savePageBtn');
+
+    let pdfDoc = null;
+    let totalPages = 0;
+    let currentPageNum = 1;
     let currentFileName = 'document';
+    let currentBlob = null;
+    let pageBlobCache = {}; // 記憶體暫存已繪製的 Blob，切換頁面秒開
 
-    // 解決 iOS 下載的核心函數 (優先調用 Web Share API，備用傳統下載)
-    async function saveOrShareFile(blob, filename, mimeType) {
-      const file = new File([blob], filename, { type: mimeType });
+    // iPhone 原生分享/儲存邏輯 (直接呼叫系統選單存入相簿)
+    async function saveCurrentPageToDevice() {
+      if (!currentBlob) return;
 
-      // 若支援原生分享 (如 iOS Safari)，直接叫起分享選單，可存入相簿或檔案 App
+      const filename = `${currentFileName}_p${currentPageNum}.png`;
+      const file = new File([currentBlob], filename, { type: 'image/png' });
+
+      // iOS Safari 原生分享：支援「儲存影像」至相簿
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
@@ -260,13 +340,13 @@
           });
           return;
         } catch (err) {
-          if (err.name === 'AbortError') return; // 使用者主動取消分享
-          console.warn('原生分享失敗，嘗試傳統下載方式', err);
+          if (err.name === 'AbortError') return;
+          console.warn('原生分享失敗，轉用下載觸發', err);
         }
       }
 
-      // 傳統電腦版或未支援 Share API 瀏覽器的下載方式
-      const url = URL.createObjectURL(blob);
+      // 備用觸發
+      const url = URL.createObjectURL(currentBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -278,118 +358,112 @@
       }, 1000);
     }
 
+    // 渲染指定頁面
+    async function renderPage(num) {
+      if (!pdfDoc || num < 1 || num > totalPages) return;
+
+      currentPageNum = num;
+      pageSelect.value = num;
+      prevBtn.disabled = (currentPageNum <= 1);
+      nextBtn.disabled = (currentPageNum >= totalPages);
+      savePageBtn.disabled = true;
+
+      // 若暫存已有，直接呈現
+      if (pageBlobCache[num]) {
+        currentBlob = pageBlobCache[num];
+        pagePreviewImg.src = URL.createObjectURL(currentBlob);
+        statusText.textContent = `第 ${num} / ${totalPages} 頁`;
+        savePageBtn.disabled = false;
+        return;
+      }
+
+      statusText.textContent = `正在載入第 ${num} 頁...`;
+
+      try {
+        const page = await pdfDoc.getPage(num);
+        const scale = parseFloat(scaleSelect.value);
+        const viewport = page.getViewport({ scale: scale });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        pageBlobCache[num] = blob;
+        currentBlob = blob;
+
+        pagePreviewImg.src = URL.createObjectURL(blob);
+        statusText.textContent = `第 ${num} / ${totalPages} 頁`;
+        savePageBtn.disabled = false;
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = `第 ${num} 頁載入失敗`;
+      }
+    }
+
+    // 選擇檔案事件
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       currentFileName = file.name.replace(/\.[^/.]+$/, "");
       fileNameDisplay.textContent = `已選擇：${file.name}`;
-      currentImages = [];
-      previewList.innerHTML = '';
-      downloadAllBtn.disabled = true;
-
+      pageBlobCache = {};
+      viewerCard.style.display = 'none';
       statusText.textContent = '讀取 PDF 檔案中...';
 
       try {
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        const totalPages = pdf.numPages;
+        pdfDoc = await loadingTask.promise;
+        totalPages = pdfDoc.numPages;
 
-        statusText.textContent = `共有 ${totalPages} 頁，開始轉換...`;
-        const scale = parseFloat(scaleSelect.value);
-
-        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-          statusText.textContent = `正在處理第 ${pageNum} / ${totalPages} 頁...`;
-
-          const page = await pdf.getPage(pageNum);
-          const viewport = page.getViewport({ scale: scale });
-
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-
-          await page.render({
-            canvasContext: context,
-            viewport: viewport
-          }).promise;
-
-          // 轉為 Blob 格式 (比 Base64 更節省 iPhone 記憶體)
-          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-          currentImages.push({
-            page: pageNum,
-            blob: blob
-          });
-
-          renderPageCard(pageNum, blob);
+        // 初始化頁數下拉選單
+        pageSelect.innerHTML = '';
+        for (let i = 1; i <= totalPages; i++) {
+          const opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = i;
+          pageSelect.appendChild(opt);
         }
+        pageTotalText.textContent = `/ ${totalPages} 頁`;
 
-        statusText.textContent = `轉換完成！共轉換 ${totalPages} 頁。`;
-        downloadAllBtn.disabled = false;
+        viewerCard.style.display = 'flex';
+        renderPage(1);
 
       } catch (err) {
         console.error(err);
-        statusText.textContent = '轉換失敗：' + (err.message || '檔案格式錯誤');
+        statusText.textContent = '讀取失敗：' + (err.message || '檔案格式錯誤');
       }
     });
 
-    // 渲染卡片與「儲存/分享」按鈕
-    function renderPageCard(pageNum, blob) {
-      const card = document.createElement('div');
-      card.className = 'page-card';
-
-      const imgUrl = URL.createObjectURL(blob);
-      const img = document.createElement('img');
-      img.src = imgUrl;
-      img.alt = `第 ${pageNum} 頁`;
-
-      const info = document.createElement('div');
-      info.className = 'page-info';
-
-      const title = document.createElement('span');
-      title.textContent = `第 ${pageNum} 頁`;
-
-      const saveBtn = document.createElement('button');
-      saveBtn.className = 'save-btn';
-      saveBtn.textContent = '儲存圖片';
-      saveBtn.addEventListener('click', () => {
-        saveOrShareFile(blob, `${currentFileName}_p${pageNum}.png`, 'image/png');
-      });
-
-      info.appendChild(title);
-      info.appendChild(saveBtn);
-      card.appendChild(img);
-      card.appendChild(info);
-
-      previewList.appendChild(card);
-    }
-
-    // 打包 ZIP 下載 / 分享
-    downloadAllBtn.addEventListener('click', async () => {
-      if (currentImages.length === 0) return;
-
-      downloadAllBtn.disabled = true;
-      downloadAllBtn.textContent = '壓縮中...';
-
-      const zip = new JSZip();
-      currentImages.forEach((item) => {
-        zip.file(`${currentFileName}_p${item.page}.png`, item.blob);
-      });
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      await saveOrShareFile(zipBlob, `${currentFileName}_images.zip`, 'application/zip');
-
-      downloadAllBtn.disabled = false;
-      downloadAllBtn.textContent = '打包下載全部 (ZIP)';
+    // 解析度變更時清除快取並重繪當前頁
+    scaleSelect.addEventListener('change', () => {
+      if (pdfDoc) {
+        pageBlobCache = {};
+        renderPage(currentPageNum);
+      }
     });
 
-    function safeBack() {
-      // 檢查上一頁是否屬於同一個網站
-      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
-        history.back();
-      }
-    }
+    // 翻頁按鈕事件
+    prevBtn.addEventListener('click', () => {
+      if (currentPageNum > 1) renderPage(currentPageNum - 1);
+    });
+    nextBtn.addEventListener('click', () => {
+      if (currentPageNum < totalPages) renderPage(currentPageNum + 1);
+    });
+    pageSelect.addEventListener('change', (e) => {
+      renderPage(parseInt(e.target.value, 10));
+    });
+
+    // 點擊儲存單張
+    savePageBtn.addEventListener('click', saveCurrentPageToDevice);
   </script>
 </body>
 </html>
