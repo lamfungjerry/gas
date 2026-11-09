@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PDF 壓縮工具</title>
+
+  <!-- Apple Web App 設定 -->
+  <meta name="apple-mobile-web-app-title" content="PDF 壓縮">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- 第三方插件：Mozilla PDF.js (解碼) + PDF-Lib (二進位重組封裝) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.9/pdf-lib.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #f3f4f6;
+      color: #1f2937;
+      padding: 16px 14px;
+      padding-top: calc(16px + env(safe-area-inset-top));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      overflow-x: hidden;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    h1 {
+      font-size: 1.45rem;
+      margin-bottom: 6px;
+      font-weight: 700;
+      user-select: none;
+      cursor: pointer;
+    }
+    p.desc {
+      color: #6b7280;
+      margin-bottom: 18px;
+      font-size: 0.88rem;
+    }
+
+    /* 控制面板區塊 */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 18px;
+      padding: 14px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      width: 100%;
+    }
+
+    /* 響應式上傳按鈕 */
+    .file-input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    .custom-file-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 48px;
+      padding: 10px;
+      background-color: #ffffff;
+      border: 2px dashed #93c5fd;
+      border-radius: 10px;
+      color: #2563eb;
+      font-weight: 600;
+      font-size: 0.92rem;
+      text-align: center;
+    }
+    .file-name-text {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.82rem;
+      color: #4b5563;
+      word-break: break-all;
+      text-align: center;
+    }
+
+    /* 上限設定區塊 */
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .setting-label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #374151;
+      display: flex;
+      justify-content: space-between;
+    }
+    .size-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .size-input-row input[type="number"] {
+      width: 90px;
+      padding: 8px 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      text-align: center;
+      background: #ffffff;
+    }
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex: 1;
+    }
+    .chip {
+      padding: 6px 10px;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #4b5563;
+      cursor: pointer;
+    }
+    .chip.active {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    /* 操作按鈕 */
+    .btn-action {
+      width: 100%;
+      height: 46px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-action:active {
+      background-color: #1d4ed8;
+    }
+    .btn-action:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    /* 進度條與狀態 */
+    .progress-box {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: #2563eb;
+      transition: width 0.2s;
+    }
+    #status {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #4b5563;
+      text-align: center;
+    }
+
+    /* 完成卡片 */
+    .result-card {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 16px;
+      gap: 12px;
+      text-align: center;
+    }
+    .result-stats {
+      font-size: 0.9rem;
+      color: #166534;
+      line-height: 1.5;
+    }
+    .save-btn {
+      width: 100%;
+      height: 44px;
+      background-color: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .save-btn:active {
+      background-color: #15803d;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1 onclick="safeBack()">PDF 壓縮工具</h1>
+    <p class="desc">每頁精準計算容量配額，專為 5–10 頁文件與 iPhone 記憶體設計。</p>
+
+    <div class="controls">
+      <!-- 檔案選取 -->
+      <div class="file-input-wrapper">
+        <div class="custom-file-btn">📂 選擇 PDF 檔案</div>
+        <input type="file" id="pdfFileInput" accept="application/pdf" />
+        <span id="fileNameDisplay" class="file-name-text">未選擇任何檔案</span>
+      </div>
+
+      <!-- 容量上限設定 (1 - 10 MB) -->
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>目標檔案大小上限：</span>
+          <span style="color: #6b7280;">(範圍: 1 ~ 10 MB)</span>
+        </div>
+        <div class="size-input-row">
+          <input type="number" id="targetSizeInput" min="1" max="10" step="0.5" value="2" />
+          <span style="font-weight: 600;">MB</span>
+          <div class="quick-chips">
+            <span class="chip" onclick="setTargetSize(1)">1 MB</span>
+            <span class="chip active" onclick="setTargetSize(2)">2 MB</span>
+            <span class="chip" onclick="setTargetSize(3)">3 MB</span>
+            <span class="chip" onclick="setTargetSize(5)">5 MB</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="startCompressBtn" class="btn-action" disabled>⚡ 開始壓縮</button>
+    </div>
+
+    <!-- 進度顯示 -->
+    <div id="progressBox" class="progress-box">
+      <div class="progress-bar-bg">
+        <div id="progressBarFill" class="progress-bar-fill"></div>
+      </div>
+      <div id="status">準備就緒</div>
+    </div>
+
+    <!-- 輸出與儲存區 -->
+    <div id="resultCard" class="result-card">
+      <div class="result-stats" id="resultStats"></div>
+      <button id="saveBtn" class="save-btn">📥 儲存 / 分享壓縮後的 PDF</button>
+    </div>
+  </div>
+
+  <script>
+    // 同源安全返回
+    function safeBack() {
+      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+        history.back();
+      }
+    }
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    const fileInput = document.getElementById('pdfFileInput');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const targetSizeInput = document.getElementById('targetSizeInput');
+    const startCompressBtn = document.getElementById('startCompressBtn');
+    const progressBox = document.getElementById('progressBox');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const statusText = document.getElementById('status');
+    const resultCard = document.getElementById('resultCard');
+    const resultStats = document.getElementById('resultStats');
+    const saveBtn = document.getElementById('saveBtn');
+
+    let currentFile = null;
+    let originalFileSizeMB = 0;
+    let compressedPdfBlob = null;
+    let outputFilename = 'compressed.pdf';
+
+    // 快捷標籤切換
+    function setTargetSize(val) {
+      targetSizeInput.value = val;
+      document.querySelectorAll('.chip').forEach(c => {
+        c.classList.toggle('active', parseFloat(c.textContent) === val);
+      });
+    }
+
+    targetSizeInput.addEventListener('input', () => {
+      const val = parseFloat(targetSizeInput.value);
+      document.querySelectorAll('.chip').forEach(c => {
+        c.classList.toggle('active', parseFloat(c.textContent) === val);
+      });
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      currentFile = file;
+      originalFileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      fileNameDisplay.textContent = `${file.name} (${originalFileSizeMB} MB)`;
+      outputFilename = file.name.replace(/\.[^/.]+$/, "") + '_compressed.pdf';
+      startCompressBtn.disabled = false;
+      resultCard.style.display = 'none';
+    });
+
+    // iPhone 原生分享 / 儲存
+    async function shareOrDownloadPdf(blob, filename) {
+      const file = new File([blob], filename, { type: 'application/pdf' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: filename
+          });
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+          console.warn('原生分享失敗，轉用標準下載', err);
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
+
+    // 單頁二分逼近編碼函數 (精確逼近預算，極限釋放記憶體)
+    async function encodePageWithinBudget(page, pageBudgetBytes) {
+      let scale = 1.5; // 兼顧高清與 iPhone 記憶體的預設倍率
+      let canvas = document.createElement('canvas');
+      let ctx = canvas.getContext('2d');
+
+      let viewport = page.getViewport({ scale: scale });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+      let lowQ = 0.15;
+      let highQ = 0.92;
+      let bestBlob = null;
+      let bestQ = 0.5;
+
+      // 3 次二分搜尋，精準鎖定最適 JPEG Quality
+      for (let i = 0; i < 3; i++) {
+        let midQ = (lowQ + highQ) / 2;
+        let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', midQ));
+
+        if (blob.size <= pageBudgetBytes) {
+          bestBlob = blob;
+          bestQ = midQ;
+          lowQ = midQ; // 嘗試追求更好畫質
+        } else {
+          highQ = midQ; // 超標，降低品質
+        }
+      }
+
+      // 極端情況：最低畫質依然超標，降 Scale 重繪一次
+      if (!bestBlob) {
+        scale = 1.0;
+        viewport = page.getViewport({ scale: scale });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        bestBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.2));
+        bestQ = 0.2;
+      }
+
+      const arrayBuffer = await bestBlob.arrayBuffer();
+
+      // 強制清空 Canvas 寬高，避免 iOS WebKit Framebuffer 記憶體滯留
+      canvas.width = 0;
+      canvas.height = 0;
+
+      return {
+        buffer: arrayBuffer,
+        size: arrayBuffer.byteLength,
+        width: viewport.width,
+        height: viewport.height,
+        qualityPct: Math.round(bestQ * 100)
+      };
+    }
+
+    // 壓縮主流程
+    startCompressBtn.addEventListener('click', async () => {
+      if (!currentFile) return;
+
+      const targetMB = Math.min(Math.max(parseFloat(targetSizeInput.value) || 2, 1), 10);
+      const targetTotalBytes = targetMB * 1024 * 1024;
+      const pdfOverheadBytes = 40 * 1024; // 預留 PDF 結構元數據空間
+      const netBudget = Math.max(targetTotalBytes - pdfOverheadBytes, 80 * 1024);
+
+      startCompressBtn.disabled = true;
+      resultCard.style.display = 'none';
+      progressBox.style.display = 'flex';
+      progressBarFill.style.width = '0%';
+      statusText.textContent = '讀取文件資訊中...';
+
+      try {
+        const fileData = await currentFile.arrayBuffer();
+        const pdfDoc = await pdfjsLib.getDocument({ data: fileData }).promise;
+        const totalPages = pdfDoc.numPages;
+
+        // 建立全新的 PDF (使用 PDF-Lib 二進位組合)
+        const newPdf = await PDFLib.PDFDocument.create();
+        let usedBytes = 0;
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          const remainingPages = totalPages - pageNum + 1;
+          // 動態餘額遞推：每頁可分配 = (總預算 - 前面已用總量) / 剩餘頁數
+          const pageBudget = Math.max((netBudget - usedBytes) / remainingPages, 20 * 1024);
+
+          statusText.textContent = `處理第 ${pageNum} / ${totalPages} 頁 (每頁預算約 ${(pageBudget / 1024).toFixed(0)} KB)...`;
+          progressBarFill.style.width = `${Math.round(((pageNum - 1) / totalPages) * 100)}%`;
+
+          const page = await pdfDoc.getPage(pageNum);
+          const encoded = await encodePageWithinBudget(page, pageBudget);
+
+          usedBytes += encoded.size;
+
+          // 嵌入 JPEG 並新增至新 PDF 頁面
+          const embeddedJpg = await newPdf.embedJpg(encoded.buffer);
+          const newPage = newPdf.addPage([encoded.width, encoded.height]);
+          newPage.drawImage(embeddedJpg, {
+            x: 0,
+            y: 0,
+            width: encoded.width,
+            height: encoded.height
+          });
+
+          // 讓出 CPU 輪巡 30ms，讓 iOS Safari 觸發垃圾回收 (GC)，杜絕記憶體累積
+          await new Promise(r => setTimeout(r, 30));
+        }
+
+        statusText.textContent = '封裝輸出檔案中...';
+        progressBarFill.style.width = '100%';
+
+        const finalPdfBytes = await newPdf.save();
+        compressedPdfBlob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+        const finalSizeMB = (compressedPdfBlob.size / (1024 * 1024)).toFixed(2);
+
+        statusText.textContent = '壓縮完成！';
+        resultStats.innerHTML = `
+          <strong>原始大小：</strong>${originalFileSizeMB} MB<br>
+          <strong>壓縮後大小：</strong>${finalSizeMB} MB<br>
+          <strong>設定上限：</strong>${targetMB.toFixed(1)} MB (共 ${totalPages} 頁)
+        `;
+        resultCard.style.display = 'flex';
+
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = '壓縮失敗：' + (err.message || '檔案格式錯誤');
+      } finally {
+        startCompressBtn.disabled = false;
+      }
+    });
+
+    saveBtn.addEventListener('click', () => {
+      if (compressedPdfBlob) {
+        shareOrDownloadPdf(compressedPdfBlob, outputFilename);
+      }
+    });
+  </script>
+</body>
+</html>
