@@ -11,9 +11,17 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <!-- 第三方插件：Mozilla PDF.js (解碼) + PDF-Lib (二進位重組封裝) -->
+  <!-- Mozilla PDF.js (解碼) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.9/pdf-lib.min.js"></script>
+
+  <!-- PDF-Lib (封裝)：改用穩定之 jsDelivr，並附帶 unpkg 備援 -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
+  <script>
+    // 若 jsDelivr 載入失敗，自動切換至 unpkg 備援
+    if (typeof PDFLib === 'undefined') {
+      document.write('<script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"><\/script>');
+    }
+  </script>
 
   <style>
     * {
@@ -374,7 +382,7 @@
 
     // 單頁二分逼近編碼函數 (精確逼近預算，極限釋放記憶體)
     async function encodePageWithinBudget(page, pageBudgetBytes) {
-      let scale = 1.5; // 兼顧高清與 iPhone 記憶體的預設倍率
+      let scale = 1.5;
       let canvas = document.createElement('canvas');
       let ctx = canvas.getContext('2d');
 
@@ -389,7 +397,6 @@
       let bestBlob = null;
       let bestQ = 0.5;
 
-      // 3 次二分搜尋，精準鎖定最適 JPEG Quality
       for (let i = 0; i < 3; i++) {
         let midQ = (lowQ + highQ) / 2;
         let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', midQ));
@@ -397,13 +404,13 @@
         if (blob.size <= pageBudgetBytes) {
           bestBlob = blob;
           bestQ = midQ;
-          lowQ = midQ; // 嘗試追求更好畫質
+          lowQ = midQ;
         } else {
-          highQ = midQ; // 超標，降低品質
+          highQ = midQ;
         }
       }
 
-      // 極端情況：最低畫質依然超標，降 Scale 重繪一次
+      // 極端情況重繪
       if (!bestBlob) {
         scale = 1.0;
         viewport = page.getViewport({ scale: scale });
@@ -416,7 +423,7 @@
 
       const arrayBuffer = await bestBlob.arrayBuffer();
 
-      // 強制清空 Canvas 寬高，避免 iOS WebKit Framebuffer 記憶體滯留
+      // 強制清空 Canvas 寬高以釋放顯存
       canvas.width = 0;
       canvas.height = 0;
 
@@ -432,6 +439,12 @@
     // 壓縮主流程
     startCompressBtn.addEventListener('click', async () => {
       if (!currentFile) return;
+
+      // 檢查 PDFLib 套件是否已正確載入
+      if (typeof PDFLib === 'undefined') {
+        alert('核心壓縮元件 (PDFLib) 尚未載入完成，請確認網路連線或重新整理頁面。');
+        return;
+      }
 
       const targetMB = Math.min(Math.max(parseFloat(targetSizeInput.value) || 2, 1), 10);
       const targetTotalBytes = targetMB * 1024 * 1024;
@@ -449,13 +462,11 @@
         const pdfDoc = await pdfjsLib.getDocument({ data: fileData }).promise;
         const totalPages = pdfDoc.numPages;
 
-        // 建立全新的 PDF (使用 PDF-Lib 二進位組合)
         const newPdf = await PDFLib.PDFDocument.create();
         let usedBytes = 0;
 
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
           const remainingPages = totalPages - pageNum + 1;
-          // 動態餘額遞推：每頁可分配 = (總預算 - 前面已用總量) / 剩餘頁數
           const pageBudget = Math.max((netBudget - usedBytes) / remainingPages, 20 * 1024);
 
           statusText.textContent = `處理第 ${pageNum} / ${totalPages} 頁 (每頁預算約 ${(pageBudget / 1024).toFixed(0)} KB)...`;
@@ -466,7 +477,6 @@
 
           usedBytes += encoded.size;
 
-          // 嵌入 JPEG 並新增至新 PDF 頁面
           const embeddedJpg = await newPdf.embedJpg(encoded.buffer);
           const newPage = newPdf.addPage([encoded.width, encoded.height]);
           newPage.drawImage(embeddedJpg, {
@@ -476,7 +486,7 @@
             height: encoded.height
           });
 
-          // 讓出 CPU 輪巡 30ms，讓 iOS Safari 觸發垃圾回收 (GC)，杜絕記憶體累積
+          // 讓出 CPU 輪巡 30ms 觸發 Safari GC
           await new Promise(r => setTimeout(r, 30));
         }
 
