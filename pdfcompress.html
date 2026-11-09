@@ -11,9 +11,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <!-- Mozilla PDF.js (解碼) -->
+  <!-- 第三方插件 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <!-- jsPDF (封裝) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
@@ -216,7 +215,7 @@
     .result-stats {
       font-size: 0.9rem;
       color: #166534;
-      line-height: 1.5;
+      line-height: 1.6;
     }
     .save-btn {
       width: 100%;
@@ -238,7 +237,7 @@
 
   <div class="container">
     <h1 onclick="safeBack()">PDF 壓縮工具</h1>
-    <p class="desc">每頁精準計算容量配額，專為 5–10 頁文件與 iPhone 記憶體設計。</p>
+    <p class="desc">動態最大化解析度，充分利用指定空間確保文字清晰銳利。</p>
 
     <div class="controls">
       <div class="file-input-wrapper">
@@ -289,31 +288,6 @@
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-    // 智能 CDN 自動容錯與重試載入器
-    async function ensureJsPdfLoaded() {
-      if (window.jspdf?.jsPDF || window.jsPDF) return true;
-      const cdnList = [
-        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-        'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
-        'https://cdn.bootcdn.net/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-      ];
-      for (const url of cdnList) {
-        try {
-          await new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = url;
-            s.onload = resolve;
-            s.onerror = reject;
-            document.head.appendChild(s);
-          });
-          if (window.jspdf?.jsPDF || window.jsPDF) return true;
-        } catch (e) {
-          console.warn('CDN 載入失敗，嘗試下一個備用來源:', url);
-        }
-      }
-      return false;
-    }
 
     const fileInput = document.getElementById('pdfFileInput');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -385,86 +359,95 @@
       }, 1000);
     }
 
-    // 文字清晰度優先的動態編碼函數
-async function encodePageWithinBudget(page, pageBudgetBytes) {
-  // 1. 嚴格鎖定 scale >= 2.0 (確保 12pt 文字有足夠像素，絕不降到 1.0)
-  const scale = 2.0; 
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-
-  const viewport = page.getViewport({ scale: scale });
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-
-  // 啟用高質量影像平滑縮放
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-  // 2. 二分搜尋畫質 (鎖定 0.35 ~ 0.85，低於 0.35 文字會起噪點)
-  let lowQ = 0.35;
-  let highQ = 0.85;
-  let bestDataUrl = null;
-  let bestBytes = 0;
-
-  for (let i = 0; i < 4; i++) {
-    let midQ = (lowQ + highQ) / 2;
-    let dataUrl = canvas.toDataURL('image/jpeg', midQ);
-    let byteSize = Math.round((dataUrl.length - 23) * 0.75);
-
-    if (byteSize <= pageBudgetBytes) {
-      bestDataUrl = dataUrl;
-      bestBytes = byteSize;
-      lowQ = midQ; // 嘗試追求更好畫質
-    } else {
-      highQ = midQ;
+    // 核心改善：根據每頁預算自動分配合適的高解析度倍率
+    function decideOptimalScale(budgetBytes) {
+      const budgetKB = budgetBytes / 1024;
+      if (budgetKB >= 600) return 2.8;      // 預算極充裕：超高清晰度 (~200 DPI)
+      if (budgetKB >= 350) return 2.4;      // 預算適中 (如 2MB 4頁)：Retina 級高清晰度 (~172 DPI)
+      if (budgetKB >= 200) return 2.0;      // 預算緊湊：標準高清 (144 DPI)
+      if (budgetKB >= 120) return 1.8;      
+      return 1.5;                           // 極小預算底限
     }
-  }
 
-  // 3. 若依然超出預算，優先保留 scale=2.0，以最低容許品質 (0.35) 輸出，絕不縮小圖片尺寸
-  if (!bestDataUrl) {
-    bestDataUrl = canvas.toDataURL('image/jpeg', 0.35);
-    bestBytes = Math.round((bestDataUrl.length - 23) * 0.75);
-  }
+    // 動態最高清晰度編碼函數
+    async function encodePageWithinBudget(page, pageBudgetBytes) {
+      let scale = decideOptimalScale(pageBudgetBytes);
+      let canvas = document.createElement('canvas');
+      let ctx = canvas.getContext('2d');
 
-  // 清除 Canvas 釋放顯存
-  canvas.width = 0;
-  canvas.height = 0;
+      // 取得原始 PDF 點數尺寸（保持標準 A4 比例）
+      const baseViewport = page.getViewport({ scale: 1.0 });
+      const origPtWidth = baseViewport.width;
+      const origPtHeight = baseViewport.height;
 
-  return {
-    dataUrl: bestDataUrl,
-    size: bestBytes,
-    width: viewport.width,
-    height: viewport.height
-  };
-}
+      // 繪製高解析度畫布
+      let viewport = page.getViewport({ scale: scale });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // intent: 'print' 強制以列印等級進行字體向量反鋸齒
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport,
+        intent: 'print'
+      }).promise;
+
+      // 優先以高畫質 (0.88) 產出
+      let quality = 0.88;
+      let dataUrl = canvas.toDataURL('image/jpeg', quality);
+      let byteSize = Math.round((dataUrl.length - 23) * 0.75);
+
+      // 若超出該頁預算，才逐步下調 JPEG 品質（最低保底 0.50，絕不讓文字發散毛邊）
+      if (byteSize > pageBudgetBytes) {
+        let lowQ = 0.50;
+        let highQ = 0.88;
+        for (let i = 0; i < 3; i++) {
+          let midQ = (lowQ + highQ) / 2;
+          let testUrl = canvas.toDataURL('image/jpeg', midQ);
+          let testBytes = Math.round((testUrl.length - 23) * 0.75);
+          if (testBytes <= pageBudgetBytes) {
+            dataUrl = testUrl;
+            byteSize = testBytes;
+            lowQ = midQ;
+          } else {
+            highQ = midQ;
+          }
+        }
+      }
+
+      // 徹底銷毀 Canvas 釋放 iPhone GPU 顯存
+      canvas.width = 0;
+      canvas.height = 0;
+
+      return {
+        dataUrl: dataUrl,
+        size: byteSize,
+        ptWidth: origPtWidth,
+        ptHeight: origPtHeight
+      };
+    }
 
     startCompressBtn.addEventListener('click', async () => {
       if (!currentFile) return;
+
+      const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+      if (!jsPDFConstructor) {
+        alert('核心壓縮元件載入中，請稍候重試。');
+        return;
+      }
+
+      const targetMB = Math.min(Math.max(parseFloat(targetSizeInput.value) || 2, 1), 10);
+      const targetTotalBytes = targetMB * 1024 * 1024;
+      const pdfOverheadBytes = 30 * 1024;
+      const netBudget = Math.max(targetTotalBytes - pdfOverheadBytes, 80 * 1024);
 
       startCompressBtn.disabled = true;
       resultCard.style.display = 'none';
       progressBox.style.display = 'flex';
       progressBarFill.style.width = '0%';
-      statusText.textContent = '初始化壓縮模組...';
-
-      const isLoaded = await ensureJsPdfLoaded();
-      if (!isLoaded) {
-        alert('核心壓縮元件載入逾時，請檢查網絡連線或關閉阻擋插件後重試。');
-        startCompressBtn.disabled = false;
-        progressBox.style.display = 'none';
-        return;
-      }
-
-      const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-
-      const targetMB = Math.min(Math.max(parseFloat(targetSizeInput.value) || 2, 1), 10);
-      const targetTotalBytes = targetMB * 1024 * 1024;
-      const pdfOverheadBytes = 35 * 1024;
-      const netBudget = Math.max(targetTotalBytes - pdfOverheadBytes, 80 * 1024);
-
       statusText.textContent = '讀取文件資訊中...';
 
       try {
@@ -477,9 +460,10 @@ async function encodePageWithinBudget(page, pageBudgetBytes) {
 
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
           const remainingPages = totalPages - pageNum + 1;
-          const pageBudget = Math.max((netBudget - usedBytes) / remainingPages, 20 * 1024);
+          // 動態配額：把前面頁面節省的容量全數留給後續頁面衝刺解析度
+          const pageBudget = Math.max((netBudget - usedBytes) / remainingPages, 30 * 1024);
 
-          statusText.textContent = `處理第 ${pageNum} / ${totalPages} 頁...`;
+          statusText.textContent = `處理第 ${pageNum} / ${totalPages} 頁 (優化清晰度中)...`;
           progressBarFill.style.width = `${Math.round(((pageNum - 1) / totalPages) * 100)}%`;
 
           const page = await pdfDoc.getPage(pageNum);
@@ -487,22 +471,24 @@ async function encodePageWithinBudget(page, pageBudgetBytes) {
 
           usedBytes += encoded.size;
 
-          const orientation = encoded.width > encoded.height ? 'l' : 'p';
+          const orientation = encoded.ptWidth > encoded.ptHeight ? 'l' : 'p';
+
+          // 使用標準 pt 單位，維持真實紙張比例與 Retina 像素映射
           if (pageNum === 1) {
             doc = new jsPDFConstructor({
               orientation: orientation,
-              unit: 'px',
-              format: [encoded.width, encoded.height],
+              unit: 'pt',
+              format: [encoded.ptWidth, encoded.ptHeight],
               compress: true
             });
           } else {
-            doc.addPage([encoded.width, encoded.height], orientation);
+            doc.addPage([encoded.ptWidth, encoded.ptHeight], orientation);
           }
 
-          doc.addImage(encoded.dataUrl, 'JPEG', 0, 0, encoded.width, encoded.height, undefined, 'FAST');
+          doc.addImage(encoded.dataUrl, 'JPEG', 0, 0, encoded.ptWidth, encoded.ptHeight, undefined, 'SLOW');
 
-          // 讓出 30ms 觸發 Safari GC
-          await new Promise(r => setTimeout(r, 30));
+          // 讓出 CPU 輪巡 35ms 供 iPhone Safari 垃圾回收
+          await new Promise(r => setTimeout(r, 35));
         }
 
         statusText.textContent = '封裝輸出檔案中...';
