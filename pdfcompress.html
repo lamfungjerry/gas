@@ -385,59 +385,61 @@
       }, 1000);
     }
 
-    // 單頁動態逼近編碼
-    async function encodePageWithinBudget(page, pageBudgetBytes) {
-      let scale = 1.5;
-      let canvas = document.createElement('canvas');
-      let ctx = canvas.getContext('2d');
+    // 文字清晰度優先的動態編碼函數
+async function encodePageWithinBudget(page, pageBudgetBytes) {
+  // 1. 嚴格鎖定 scale >= 2.0 (確保 12pt 文字有足夠像素，絕不降到 1.0)
+  const scale = 2.0; 
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
 
-      let viewport = page.getViewport({ scale: scale });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+  const viewport = page.getViewport({ scale: scale });
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
 
-      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+  // 啟用高質量影像平滑縮放
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
-      let lowQ = 0.15;
-      let highQ = 0.92;
-      let bestDataUrl = null;
-      let bestBytes = 0;
+  await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-      for (let i = 0; i < 3; i++) {
-        let midQ = (lowQ + highQ) / 2;
-        let dataUrl = canvas.toDataURL('image/jpeg', midQ);
-        // Base64 長度換算為實際位元組數
-        let byteSize = Math.round((dataUrl.length - 23) * 0.75);
+  // 2. 二分搜尋畫質 (鎖定 0.35 ~ 0.85，低於 0.35 文字會起噪點)
+  let lowQ = 0.35;
+  let highQ = 0.85;
+  let bestDataUrl = null;
+  let bestBytes = 0;
 
-        if (byteSize <= pageBudgetBytes) {
-          bestDataUrl = dataUrl;
-          bestBytes = byteSize;
-          lowQ = midQ;
-        } else {
-          highQ = midQ;
-        }
-      }
+  for (let i = 0; i < 4; i++) {
+    let midQ = (lowQ + highQ) / 2;
+    let dataUrl = canvas.toDataURL('image/jpeg', midQ);
+    let byteSize = Math.round((dataUrl.length - 23) * 0.75);
 
-      if (!bestDataUrl) {
-        scale = 1.0;
-        viewport = page.getViewport({ scale: scale });
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        bestDataUrl = canvas.toDataURL('image/jpeg', 0.2);
-        bestBytes = Math.round((bestDataUrl.length - 23) * 0.75);
-      }
-
-      // 清除 Canvas 釋放 iOS 顯示記憶體
-      canvas.width = 0;
-      canvas.height = 0;
-
-      return {
-        dataUrl: bestDataUrl,
-        size: bestBytes,
-        width: viewport.width,
-        height: viewport.height
-      };
+    if (byteSize <= pageBudgetBytes) {
+      bestDataUrl = dataUrl;
+      bestBytes = byteSize;
+      lowQ = midQ; // 嘗試追求更好畫質
+    } else {
+      highQ = midQ;
     }
+  }
+
+  // 3. 若依然超出預算，優先保留 scale=2.0，以最低容許品質 (0.35) 輸出，絕不縮小圖片尺寸
+  if (!bestDataUrl) {
+    bestDataUrl = canvas.toDataURL('image/jpeg', 0.35);
+    bestBytes = Math.round((bestDataUrl.length - 23) * 0.75);
+  }
+
+  // 清除 Canvas 釋放顯存
+  canvas.width = 0;
+  canvas.height = 0;
+
+  return {
+    dataUrl: bestDataUrl,
+    size: bestBytes,
+    width: viewport.width,
+    height: viewport.height
+  };
+}
+
 
     startCompressBtn.addEventListener('click', async () => {
       if (!currentFile) return;
