@@ -3,669 +3,200 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>PDF 壓縮極致清晰工具</title>
+  <title>學習程式</title>
 
-  <!-- Apple Web App 設定 -->
-  <meta name="apple-mobile-web-app-title" content="PDF 壓縮">
+  <!-- 1. 引入 manifest.json，設定 scope 為 "/" 以允許跨 Repo 全螢幕跳轉 -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- 2. iOS Web App 原生全螢幕設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-
-  <!-- 第三方插件 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <meta name="apple-mobile-web-app-title" content="學習程式">
+  
+  <!-- 3. 主畫面與網站 Icon -->
+  <link rel="apple-touch-icon" href="icons/launcher.png">
+  <link rel="icon" type="image/png" href="icons/launcher.png">
 
   <style>
+    :root {
+      --icon-size: 62px;
+      --icon-radius: 14px;
+      --font-size-title: 12px;
+      --grid-gap-y: 24px;
+      --grid-gap-x: 16px;
+    }
+    
+    @media (min-width: 768px) {
+      :root {
+        --icon-size: 72px;
+        --icon-radius: 16px;
+        --font-size-title: 13px;
+        --grid-gap-y: 32px;
+        --grid-gap-x: 24px;
+      }
+    }
+    
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
     }
+    
+    /* 解決 iOS 狀態列白邊：設定底色與漸層頂部一致 */
+    html {
+      background-color: #2b5876;
+    }
+    
     body {
-      background-color: #f3f4f6;
-      color: #1f2937;
-      padding: 16px 14px;
-      padding-top: calc(16px + env(safe-area-inset-top));
-      padding-bottom: calc(24px + env(safe-area-inset-bottom));
-      overflow-x: hidden;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 20px 16px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-    h1 {
-      font-size: 1.45rem;
-      margin-bottom: 6px;
-      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+      color: #ffffff;
       user-select: none;
+      
+      /* 確保桌面可順暢上下碌，已移除會導致 Icon 置中偏下的 display: flex */
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .desktop-container {
+      width: 100%;
+      max-width: 1024px;
+      margin: 0 auto; /* 水平置中 */
+      
+      /* 避開 iPhone 瀏海與導覽條，已將頂部距離縮細 (10px) 讓 Icon 靠上 */
+      padding-top: calc(env(safe-area-inset-top) + 10px);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+      padding-left: calc(env(safe-area-inset-left) + 20px);
+      padding-right: calc(env(safe-area-inset-right) + 20px);
+      box-sizing: border-box;
+    }
+    
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      row-gap: var(--grid-gap-y);
+      column-gap: var(--grid-gap-x);
+      justify-items: center;
+      align-content: start; /* 確保網格內容緊貼頂部排列 */
+    }
+    
+    @media (min-width: 560px) {
+      .app-grid {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .app-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      }
+    }
+    
+    .app-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 90px;
       cursor: pointer;
     }
-    p.desc {
-      color: #6b7280;
-      margin-bottom: 18px;
-      font-size: 0.88rem;
-    }
-
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-bottom: 18px;
-      padding: 14px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      width: 100%;
-    }
-
-    .file-input-wrapper {
-      position: relative;
-      width: 100%;
-    }
-    .file-input-wrapper input[type="file"] {
-      position: absolute;
-      left: 0;
-      top: 0;
-      opacity: 0;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
-    .custom-file-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      min-height: 48px;
-      padding: 10px;
-      background-color: #ffffff;
-      border: 2px dashed #93c5fd;
-      border-radius: 10px;
-      color: #2563eb;
-      font-weight: 600;
-      font-size: 0.92rem;
-      text-align: center;
-    }
-    .file-name-text {
-      display: block;
-      margin-top: 6px;
-      font-size: 0.82rem;
-      color: #4b5563;
-      word-break: break-all;
-      text-align: center;
-    }
-
-    .setting-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .setting-label {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #374151;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .size-input-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .size-input-row input[type="number"] {
-      width: 86px;
-      padding: 8px 10px;
-      font-size: 1rem;
-      font-weight: 600;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      text-align: center;
-      background: #ffffff;
-    }
-    .quick-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      flex: 1;
-    }
-    .chip {
-      padding: 6px 10px;
-      background: #ffffff;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: #4b5563;
-      cursor: pointer;
-    }
-    .chip.active {
-      background: #eff6ff;
-      border-color: #3b82f6;
-      color: #2563eb;
-      font-weight: 600;
-    }
-
-    .tuning-panel {
-      display: none;
-      flex-direction: column;
-      gap: 12px;
-      padding: 14px;
-      background: #ffffff;
-      border: 1px solid #dbeafe;
-      border-radius: 10px;
-    }
-    .slider-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .slider-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #4b5563;
-    }
-    .slider-header span.val-badge {
-      color: #2563eb;
-      font-weight: 700;
-    }
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      background: #e5e7eb;
-      border-radius: 3px;
-      outline: none;
-    }
-    .estimate-box {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 12px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 0.88rem;
-    }
-    .estimate-size {
-      font-weight: 700;
-      font-size: 1rem;
-    }
-    .status-ok { color: #16a34a; }
-    .status-over { color: #dc2626; }
-
-    .btn-action {
-      width: 100%;
-      height: 46px;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .btn-action:active { background-color: #1d4ed8; }
-    .btn-action:disabled { background-color: #9ca3af; cursor: not-allowed; }
-
-    .progress-box {
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .progress-bar-bg {
-      width: 100%;
-      height: 8px;
-      background: #e5e7eb;
-      border-radius: 4px;
+    
+    .app-icon {
+      width: var(--icon-size);
+      height: var(--icon-size);
+      border-radius: var(--icon-radius);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+      transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.15s ease;
       overflow: hidden;
-    }
-    .progress-bar-fill {
-      width: 0%;
-      height: 100%;
-      background: #2563eb;
-      transition: width 0.2s;
-    }
-    #status {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #4b5563;
-      text-align: center;
-    }
-
-    .result-card {
-      display: none;
-      flex-direction: column;
+      background-color: rgba(255, 255, 255, 0.15);
+      display: flex;
       align-items: center;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 12px;
-      padding: 16px;
-      gap: 12px;
-      text-align: center;
+      justify-content: center;
+      font-size: calc(var(--icon-size) * 0.5);
     }
-    .result-stats {
-      font-size: 0.9rem;
-      color: #166534;
-      line-height: 1.6;
-    }
-    .save-btn {
+    
+    .app-icon img {
       width: 100%;
-      height: 44px;
-      background-color: #16a34a;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
-    .save-btn:active { background-color: #15803d; }
+    
+    .app-item:active .app-icon {
+      transform: scale(0.90);
+      filter: brightness(0.75);
+    }
+    
+    .app-title {
+      margin-top: 7px;
+      font-size: var(--font-size-title);
+      font-weight: 500;
+      color: #ffffff;
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.2px;
+    }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1 onclick="safeBack()">PDF 壓縮極致清晰工具</h1>
-    <p class="desc">支援超高清解析度 (最高 6.0x) 與 100% 畫質，充分利用可用容量。</p>
+  <main class="desktop-container" id="desktop">
+    <div id="appGrid" class="app-grid"></div>
+  </main>
 
-    <div class="controls">
-      <!-- 檔案選取 -->
-      <div class="file-input-wrapper">
-        <div class="custom-file-btn">📂 選擇 PDF 檔案</div>
-        <input type="file" id="pdfFileInput" accept="application/pdf" />
-        <span id="fileNameDisplay" class="file-name-text">未選擇任何檔案</span>
-      </div>
-
-      <!-- 容量上限設定 (1 - 20 MB) -->
-      <div class="setting-group">
-        <div class="setting-label">
-          <span>目標檔案大小上限：</span>
-          <span style="color: #6b7280;">(範圍: 1 ~ 20 MB)</span>
-        </div>
-        <div class="size-input-row">
-          <input type="number" id="targetSizeInput" min="1" max="20" step="0.5" value="5" />
-          <span style="font-weight: 600;">MB</span>
-          <div class="quick-chips">
-            <span class="chip" onclick="setTargetSize(2)">2 MB</span>
-            <span class="chip active" onclick="setTargetSize(5)">5 MB</span>
-            <span class="chip" onclick="setTargetSize(10)">10 MB</span>
-            <span class="chip" onclick="setTargetSize(15)">15 MB</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 試算與微調面板 -->
-      <div id="tuningPanel" class="tuning-panel">
-        <div class="slider-row">
-          <div class="slider-header">
-            <span>解析度倍率 (Scale)：</span>
-            <span id="scaleValBadge" class="val-badge">4.0x</span>
-          </div>
-          <!-- 開放至 6.0x -->
-          <input type="range" id="scaleSlider" min="1.5" max="6.0" step="0.1" value="4.0" />
-        </div>
-
-        <div class="slider-row">
-          <div class="slider-header">
-            <span>壓縮畫質 (Quality)：</span>
-            <span id="qualityValBadge" class="val-badge">98%</span>
-          </div>
-          <!-- 開放至 100% -->
-          <input type="range" id="qualitySlider" min="50" max="100" step="1" value="98" />
-        </div>
-
-        <div class="estimate-box">
-          <span>預估產出總大小：</span>
-          <span id="estimateText" class="estimate-size status-ok">計算中...</span>
-        </div>
-      </div>
-
-      <button id="startCompressBtn" class="btn-action" disabled>⚡ 開始極致清晰壓縮</button>
-    </div>
-
-    <div id="progressBox" class="progress-box">
-      <div class="progress-bar-bg">
-        <div id="progressBarFill" class="progress-bar-fill"></div>
-      </div>
-      <div id="status">準備就緒</div>
-    </div>
-
-    <div id="resultCard" class="result-card">
-      <div class="result-stats" id="resultStats"></div>
-      <button id="saveBtn" class="save-btn">📥 儲存 / 分享壓縮後的 PDF</button>
-    </div>
-  </div>
+  <!-- 載入你的 apps.js 資料檔 -->
+  <script src="apps.js"></script>
 
   <script>
-    function safeBack() {
-      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
-        history.back();
-      }
-    }
+    const gridContainer = document.getElementById('appGrid');
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    if (typeof apps !== 'undefined' && Array.isArray(apps)) {
+      apps.forEach(app => {
+        // 🔥 將容器設定為 div，防止 iOS Safari 將 <a> 標籤視為跳出 App
+        const item = document.createElement('div');
+        item.className = 'app-item';
 
-    const fileInput = document.getElementById('pdfFileInput');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const targetSizeInput = document.getElementById('targetSizeInput');
-    const tuningPanel = document.getElementById('tuningPanel');
-    const scaleSlider = document.getElementById('scaleSlider');
-    const qualitySlider = document.getElementById('qualitySlider');
-    const scaleValBadge = document.getElementById('scaleValBadge');
-    const qualityValBadge = document.getElementById('qualityValBadge');
-    const estimateText = document.getElementById('estimateText');
+        // 🔥 使用 location.href 進行跳轉，確保維持全螢幕狀態
+        item.addEventListener('click', () => {
+          window.location.href = app.url;
+        });
 
-    const startCompressBtn = document.getElementById('startCompressBtn');
-    const progressBox = document.getElementById('progressBox');
-    const progressBarFill = document.getElementById('progressBarFill');
-    const statusText = document.getElementById('status');
-    const resultCard = document.getElementById('resultCard');
-    const resultStats = document.getElementById('resultStats');
-    const saveBtn = document.getElementById('saveBtn');
+        const iconBox = document.createElement('div');
+        iconBox.className = 'app-icon';
 
-    let currentFile = null;
-    let originalFileSizeMB = 0;
-    let compressedPdfBlob = null;
-    let outputFilename = 'compressed.pdf';
-    let loadedPdfDoc = null;
-    let totalPagesCount = 1;
-    let sampleBytesPerPixel = 0.045; 
-
-    function setTargetSize(val) {
-      targetSizeInput.value = val;
-      document.querySelectorAll('.chip').forEach(c => {
-        c.classList.toggle('active', parseFloat(c.textContent) === val);
-      });
-      autoTuneSettings();
-    }
-
-    targetSizeInput.addEventListener('input', () => {
-      const val = parseFloat(targetSizeInput.value);
-      document.querySelectorAll('.chip').forEach(c => {
-        c.classList.toggle('active', parseFloat(c.textContent) === val);
-      });
-      autoTuneSettings();
-    });
-
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      currentFile = file;
-      originalFileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      fileNameDisplay.textContent = `${file.name} (${originalFileSizeMB} MB)`;
-      outputFilename = file.name.replace(/\.[^/.]+$/, "") + '_ultra.pdf';
-      resultCard.style.display = 'none';
-
-      statusText.textContent = '讀取中，正在測算畫素密度...';
-      progressBox.style.display = 'flex';
-      progressBarFill.style.width = '30%';
-
-      try {
-        const fileData = await currentFile.arrayBuffer();
-        loadedPdfDoc = await pdfjsLib.getDocument({ data: fileData }).promise;
-        totalPagesCount = loadedPdfDoc.numPages;
-
-        await calibrateSamplePage(loadedPdfDoc);
-
-        tuningPanel.style.display = 'flex';
-        autoTuneSettings();
-        startCompressBtn.disabled = false;
-        progressBox.style.display = 'none';
-      } catch (err) {
-        console.error(err);
-        statusText.textContent = '讀取失敗：' + err.message;
-      }
-    });
-
-    async function calibrateSamplePage(pdfDoc) {
-      const page = await pdfDoc.getPage(1);
-      const testScale = 2.0;
-      const vp = page.getViewport({ scale: testScale });
-
-      const canvas = document.createElement('canvas');
-      canvas.width = vp.width;
-      canvas.height = vp.height;
-      const ctx = canvas.getContext('2d');
-
-      await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
-      const sampleUrl = canvas.toDataURL('image/jpeg', 0.95);
-      const sampleBytes = Math.round((sampleUrl.length - 23) * 0.75);
-
-      const totalPixels = vp.width * vp.height;
-      sampleBytesPerPixel = sampleBytes / totalPixels;
-
-      canvas.width = 0;
-      canvas.height = 0;
-    }
-
-    // 依據 MB 目標自動反推
-    function autoTuneSettings() {
-      if (!loadedPdfDoc) return;
-
-      const targetMB = parseFloat(targetSizeInput.value) || 5;
-      const targetBytes = targetMB * 1024 * 1024;
-      const pdfOverhead = 35 * 1024;
-      const availableBytes = targetBytes - pdfOverhead;
-      const perPageBudget = availableBytes / totalPagesCount;
-
-      // 瞄準 92% 飽和度
-      const aimPageBudget = perPageBudget * 0.92;
-
-      // 若目標空間很大 (例如每頁預算 >= 1.5MB)，直接拉滿 Quality 100%
-      let initialQuality = aimPageBudget > 1.5 * 1024 * 1024 ? 100 : 96;
-
-      let calculatedScale = Math.sqrt(aimPageBudget / (501000 * sampleBytesPerPixel));
-
-      // 範圍放寬至 1.8x ~ 5.5x
-      calculatedScale = Math.min(Math.max(calculatedScale, 1.8), 5.5);
-      calculatedScale = Math.round(calculatedScale * 10) / 10;
-
-      scaleSlider.value = calculatedScale;
-      scaleValBadge.textContent = calculatedScale.toFixed(1) + 'x';
-
-      qualitySlider.value = initialQuality;
-      qualityValBadge.textContent = initialQuality + '%';
-
-      updateEstimate();
-    }
-
-    scaleSlider.addEventListener('input', () => {
-      scaleValBadge.textContent = parseFloat(scaleSlider.value).toFixed(1) + 'x';
-      updateEstimate();
-    });
-
-    qualitySlider.addEventListener('input', () => {
-      qualityValBadge.textContent = qualitySlider.value + '%';
-      updateEstimate();
-    });
-
-    function updateEstimate() {
-      const scale = parseFloat(scaleSlider.value);
-      const quality = parseInt(qualitySlider.value, 10);
-      const targetMB = parseFloat(targetSizeInput.value) || 5;
-
-      // 100% 畫質時 JPEG 關閉抽樣，膨脹係數約 1.8 ~ 2.2
-      const qFactor = quality === 100 ? 2.1 : Math.pow(quality / 90, 1.7);
-      const pixelsPerPage = 501000 * (scale * scale);
-      const estPageBytes = pixelsPerPage * sampleBytesPerPixel * qFactor;
-      const estTotalBytes = (estPageBytes * totalPagesCount) + (35 * 1024);
-      const estMB = (estTotalBytes / (1024 * 1024)).toFixed(2);
-
-      estimateText.textContent = `約 ${estMB} MB / 上限 ${targetMB.toFixed(1)} MB`;
-
-      if (parseFloat(estMB) > targetMB) {
-        estimateText.className = 'estimate-size status-over';
-        estimateText.textContent += ' (可能微超標)';
-      } else {
-        estimateText.className = 'estimate-size status-ok';
-      }
-    }
-
-    async function shareOrDownloadPdf(blob, filename) {
-      const file = new File([blob], filename, { type: 'application/pdf' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: filename });
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') return;
-        }
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
-    }
-
-    startCompressBtn.addEventListener('click', async () => {
-      if (!currentFile || !loadedPdfDoc) return;
-
-      const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-      if (!jsPDFConstructor) {
-        alert('核心元件載入中，請稍候重試。');
-        return;
-      }
-
-      const userScale = parseFloat(scaleSlider.value);
-      const userQuality = parseInt(qualitySlider.value, 10) / 100;
-      const targetMB = parseFloat(targetSizeInput.value) || 5;
-      const targetTotalBytes = targetMB * 1024 * 1024;
-      const pdfOverheadBytes = 35 * 1024;
-      const netBudget = Math.max(targetTotalBytes - pdfOverheadBytes, 80 * 1024);
-
-      startCompressBtn.disabled = true;
-      resultCard.style.display = 'none';
-      progressBox.style.display = 'flex';
-      progressBarFill.style.width = '0%';
-      statusText.textContent = '啟動高解析度渲染引擎...';
-
-      try {
-        let doc = null;
-        let usedBytes = 0;
-
-        for (let pageNum = 1; pageNum <= totalPagesCount; pageNum++) {
-          const remainingPages = totalPagesCount - pageNum + 1;
-          const pageBudget = (netBudget - usedBytes) / remainingPages;
-
-          statusText.textContent = `處理第 ${pageNum} / ${totalPagesCount} 頁 (${userScale}x / ${Math.round(userQuality*100)}%)...`;
-          progressBarFill.style.width = `${Math.round(((pageNum - 1) / totalPagesCount) * 100)}%`;
-
-          const page = await loadedPdfDoc.getPage(pageNum);
-          const baseViewport = page.getViewport({ scale: 1.0 });
-          const origPtWidth = baseViewport.width;
-          const origPtHeight = baseViewport.height;
-
-          // 以用戶指定的 Scale 進行繪製 (支援 4.0x ~ 6.0x)
-          const viewport = page.getViewport({ scale: userScale });
-          const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext('2d');
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-
-          await page.render({
-            canvasContext: ctx,
-            viewport: viewport,
-            intent: 'print'
-          }).promise;
-
-          // 支援 Quality = 1.0 (100%)
-          let dataUrl = canvas.toDataURL('image/jpeg', userQuality);
-          let byteSize = Math.round((dataUrl.length - 23) * 0.75);
-
-          // 若某頁超標，微調品質以貼合預算，但絕對不降 Scale
-          if (byteSize > pageBudget) {
-            let low = 0.60;
-            let high = userQuality;
-            for (let i = 0; i < 3; i++) {
-              let mid = (low + high) / 2;
-              let testUrl = canvas.toDataURL('image/jpeg', mid);
-              let testBytes = Math.round((testUrl.length - 23) * 0.75);
-              if (testBytes <= pageBudget) {
-                dataUrl = testUrl;
-                byteSize = testBytes;
-                low = mid;
-              } else {
-                high = mid;
-              }
-            }
-          }
-
-          usedBytes += byteSize;
-
-          // 立即銷毀 Canvas 顯存，確保 iPhone 在 5x~6x 解析度下不閃退
-          canvas.width = 0;
-          canvas.height = 0;
-
-          const orientation = origPtWidth > origPtHeight ? 'l' : 'p';
-          if (pageNum === 1) {
-            doc = new jsPDFConstructor({
-              orientation: orientation,
-              unit: 'pt',
-              format: [origPtWidth, origPtHeight],
-              compress: true
-            });
-          } else {
-            doc.addPage([origPtWidth, origPtHeight], orientation);
-          }
-
-          doc.addImage(dataUrl, 'JPEG', 0, 0, origPtWidth, origPtHeight, undefined, 'SLOW');
-
-          // 給予 Safari 釋放記憶體的時間
-          await new Promise(r => setTimeout(r, 40));
+        // 判斷是圖片還是 Emoji
+        if (app.icon.includes('/') || app.icon.includes('.') || app.icon.startsWith('http')) {
+          const img = document.createElement('img');
+          img.src = app.icon;
+          img.alt = app.title;
+          img.loading = 'lazy';
+          iconBox.appendChild(img);
+        } else {
+          iconBox.textContent = app.icon; // 直接顯示 Emoji 或純文字
         }
 
-        statusText.textContent = '完成封裝！';
-        progressBarFill.style.width = '100%';
+        const title = document.createElement('span');
+        title.className = 'app-title';
+        title.textContent = app.title;
 
-        compressedPdfBlob = doc.output('blob');
-        const finalSizeMB = (compressedPdfBlob.size / (1024 * 1024)).toFixed(2);
-
-        resultStats.innerHTML = `
-          <strong>原始大小：</strong>${originalFileSizeMB} MB<br>
-          <strong>壓縮後大小：</strong><span style="font-size: 1.15rem; color: #15803d; font-weight: 700;">${finalSizeMB} MB</span><br>
-          <strong>設定上限：</strong>${targetMB.toFixed(1)} MB (採用 ${userScale}x / ${Math.round(userQuality*100)}% 畫質)
-        `;
-        resultCard.style.display = 'flex';
-
-      } catch (err) {
-        console.error(err);
-        statusText.textContent = '壓縮失敗：' + (err.message || '檔案格式錯誤');
-      } finally {
-        startCompressBtn.disabled = false;
-      }
-    });
-
-    saveBtn.addEventListener('click', () => {
-      if (compressedPdfBlob) {
-        shareOrDownloadPdf(compressedPdfBlob, outputFilename);
-      }
-    });
+        item.appendChild(iconBox);
+        item.appendChild(title);
+        gridContainer.appendChild(item);
+      });
+    }
   </script>
 </body>
 </html>
