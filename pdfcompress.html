@@ -13,15 +13,8 @@
 
   <!-- Mozilla PDF.js (解碼) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-
-  <!-- PDF-Lib (封裝)：改用穩定之 jsDelivr，並附帶 unpkg 備援 -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
-  <script>
-    // 若 jsDelivr 載入失敗，自動切換至 unpkg 備援
-    if (typeof PDFLib === 'undefined') {
-      document.write('<script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"><\/script>');
-    }
-  </script>
+  <!-- jsPDF (封裝) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
     * {
@@ -60,7 +53,6 @@
       font-size: 0.88rem;
     }
 
-    /* 控制面板區塊 */
     .controls {
       display: flex;
       flex-direction: column;
@@ -73,7 +65,6 @@
       width: 100%;
     }
 
-    /* 響應式上傳按鈕 */
     .file-input-wrapper {
       position: relative;
       width: 100%;
@@ -112,7 +103,6 @@
       text-align: center;
     }
 
-    /* 上限設定區塊 */
     .setting-group {
       display: flex;
       flex-direction: column;
@@ -131,7 +121,7 @@
       gap: 10px;
     }
     .size-input-row input[type="number"] {
-      width: 90px;
+      width: 86px;
       padding: 8px 10px;
       font-size: 1rem;
       font-weight: 600;
@@ -163,7 +153,6 @@
       font-weight: 600;
     }
 
-    /* 操作按鈕 */
     .btn-action {
       width: 100%;
       height: 46px;
@@ -187,7 +176,6 @@
       cursor: not-allowed;
     }
 
-    /* 進度條與狀態 */
     .progress-box {
       display: none;
       flex-direction: column;
@@ -214,7 +202,6 @@
       text-align: center;
     }
 
-    /* 完成卡片 */
     .result-card {
       display: none;
       flex-direction: column;
@@ -254,14 +241,12 @@
     <p class="desc">每頁精準計算容量配額，專為 5–10 頁文件與 iPhone 記憶體設計。</p>
 
     <div class="controls">
-      <!-- 檔案選取 -->
       <div class="file-input-wrapper">
         <div class="custom-file-btn">📂 選擇 PDF 檔案</div>
         <input type="file" id="pdfFileInput" accept="application/pdf" />
         <span id="fileNameDisplay" class="file-name-text">未選擇任何檔案</span>
       </div>
 
-      <!-- 容量上限設定 (1 - 10 MB) -->
       <div class="setting-group">
         <div class="setting-label">
           <span>目標檔案大小上限：</span>
@@ -282,7 +267,6 @@
       <button id="startCompressBtn" class="btn-action" disabled>⚡ 開始壓縮</button>
     </div>
 
-    <!-- 進度顯示 -->
     <div id="progressBox" class="progress-box">
       <div class="progress-bar-bg">
         <div id="progressBarFill" class="progress-bar-fill"></div>
@@ -290,7 +274,6 @@
       <div id="status">準備就緒</div>
     </div>
 
-    <!-- 輸出與儲存區 -->
     <div id="resultCard" class="result-card">
       <div class="result-stats" id="resultStats"></div>
       <button id="saveBtn" class="save-btn">📥 儲存 / 分享壓縮後的 PDF</button>
@@ -298,7 +281,6 @@
   </div>
 
   <script>
-    // 同源安全返回
     function safeBack() {
       if (document.referrer && document.referrer.startsWith(window.location.origin)) {
         history.back();
@@ -307,6 +289,31 @@
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    // 智能 CDN 自動容錯與重試載入器
+    async function ensureJsPdfLoaded() {
+      if (window.jspdf?.jsPDF || window.jsPDF) return true;
+      const cdnList = [
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+        'https://cdn.bootcdn.net/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+      ];
+      for (const url of cdnList) {
+        try {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = url;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+          if (window.jspdf?.jsPDF || window.jsPDF) return true;
+        } catch (e) {
+          console.warn('CDN 載入失敗，嘗試下一個備用來源:', url);
+        }
+      }
+      return false;
+    }
 
     const fileInput = document.getElementById('pdfFileInput');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -324,7 +331,6 @@
     let compressedPdfBlob = null;
     let outputFilename = 'compressed.pdf';
 
-    // 快捷標籤切換
     function setTargetSize(val) {
       targetSizeInput.value = val;
       document.querySelectorAll('.chip').forEach(c => {
@@ -351,7 +357,6 @@
       resultCard.style.display = 'none';
     });
 
-    // iPhone 原生分享 / 儲存
     async function shareOrDownloadPdf(blob, filename) {
       const file = new File([blob], filename, { type: 'application/pdf' });
 
@@ -380,7 +385,7 @@
       }, 1000);
     }
 
-    // 單頁二分逼近編碼函數 (精確逼近預算，極限釋放記憶體)
+    // 單頁動態逼近編碼
     async function encodePageWithinBudget(page, pageBudgetBytes) {
       let scale = 1.5;
       let canvas = document.createElement('canvas');
@@ -394,67 +399,70 @@
 
       let lowQ = 0.15;
       let highQ = 0.92;
-      let bestBlob = null;
-      let bestQ = 0.5;
+      let bestDataUrl = null;
+      let bestBytes = 0;
 
       for (let i = 0; i < 3; i++) {
         let midQ = (lowQ + highQ) / 2;
-        let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', midQ));
+        let dataUrl = canvas.toDataURL('image/jpeg', midQ);
+        // Base64 長度換算為實際位元組數
+        let byteSize = Math.round((dataUrl.length - 23) * 0.75);
 
-        if (blob.size <= pageBudgetBytes) {
-          bestBlob = blob;
-          bestQ = midQ;
+        if (byteSize <= pageBudgetBytes) {
+          bestDataUrl = dataUrl;
+          bestBytes = byteSize;
           lowQ = midQ;
         } else {
           highQ = midQ;
         }
       }
 
-      // 極端情況重繪
-      if (!bestBlob) {
+      if (!bestDataUrl) {
         scale = 1.0;
         viewport = page.getViewport({ scale: scale });
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        bestBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.2));
-        bestQ = 0.2;
+        bestDataUrl = canvas.toDataURL('image/jpeg', 0.2);
+        bestBytes = Math.round((bestDataUrl.length - 23) * 0.75);
       }
 
-      const arrayBuffer = await bestBlob.arrayBuffer();
-
-      // 強制清空 Canvas 寬高以釋放顯存
+      // 清除 Canvas 釋放 iOS 顯示記憶體
       canvas.width = 0;
       canvas.height = 0;
 
       return {
-        buffer: arrayBuffer,
-        size: arrayBuffer.byteLength,
+        dataUrl: bestDataUrl,
+        size: bestBytes,
         width: viewport.width,
-        height: viewport.height,
-        qualityPct: Math.round(bestQ * 100)
+        height: viewport.height
       };
     }
 
-    // 壓縮主流程
     startCompressBtn.addEventListener('click', async () => {
       if (!currentFile) return;
-
-      // 檢查 PDFLib 套件是否已正確載入
-      if (typeof PDFLib === 'undefined') {
-        alert('核心壓縮元件 (PDFLib) 尚未載入完成，請確認網路連線或重新整理頁面。');
-        return;
-      }
-
-      const targetMB = Math.min(Math.max(parseFloat(targetSizeInput.value) || 2, 1), 10);
-      const targetTotalBytes = targetMB * 1024 * 1024;
-      const pdfOverheadBytes = 40 * 1024; // 預留 PDF 結構元數據空間
-      const netBudget = Math.max(targetTotalBytes - pdfOverheadBytes, 80 * 1024);
 
       startCompressBtn.disabled = true;
       resultCard.style.display = 'none';
       progressBox.style.display = 'flex';
       progressBarFill.style.width = '0%';
+      statusText.textContent = '初始化壓縮模組...';
+
+      const isLoaded = await ensureJsPdfLoaded();
+      if (!isLoaded) {
+        alert('核心壓縮元件載入逾時，請檢查網絡連線或關閉阻擋插件後重試。');
+        startCompressBtn.disabled = false;
+        progressBox.style.display = 'none';
+        return;
+      }
+
+      const jsPDFConstructor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+
+      const targetMB = Math.min(Math.max(parseFloat(targetSizeInput.value) || 2, 1), 10);
+      const targetTotalBytes = targetMB * 1024 * 1024;
+      const pdfOverheadBytes = 35 * 1024;
+      const netBudget = Math.max(targetTotalBytes - pdfOverheadBytes, 80 * 1024);
+
       statusText.textContent = '讀取文件資訊中...';
 
       try {
@@ -462,14 +470,14 @@
         const pdfDoc = await pdfjsLib.getDocument({ data: fileData }).promise;
         const totalPages = pdfDoc.numPages;
 
-        const newPdf = await PDFLib.PDFDocument.create();
+        let doc = null;
         let usedBytes = 0;
 
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
           const remainingPages = totalPages - pageNum + 1;
           const pageBudget = Math.max((netBudget - usedBytes) / remainingPages, 20 * 1024);
 
-          statusText.textContent = `處理第 ${pageNum} / ${totalPages} 頁 (每頁預算約 ${(pageBudget / 1024).toFixed(0)} KB)...`;
+          statusText.textContent = `處理第 ${pageNum} / ${totalPages} 頁...`;
           progressBarFill.style.width = `${Math.round(((pageNum - 1) / totalPages) * 100)}%`;
 
           const page = await pdfDoc.getPage(pageNum);
@@ -477,24 +485,28 @@
 
           usedBytes += encoded.size;
 
-          const embeddedJpg = await newPdf.embedJpg(encoded.buffer);
-          const newPage = newPdf.addPage([encoded.width, encoded.height]);
-          newPage.drawImage(embeddedJpg, {
-            x: 0,
-            y: 0,
-            width: encoded.width,
-            height: encoded.height
-          });
+          const orientation = encoded.width > encoded.height ? 'l' : 'p';
+          if (pageNum === 1) {
+            doc = new jsPDFConstructor({
+              orientation: orientation,
+              unit: 'px',
+              format: [encoded.width, encoded.height],
+              compress: true
+            });
+          } else {
+            doc.addPage([encoded.width, encoded.height], orientation);
+          }
 
-          // 讓出 CPU 輪巡 30ms 觸發 Safari GC
+          doc.addImage(encoded.dataUrl, 'JPEG', 0, 0, encoded.width, encoded.height, undefined, 'FAST');
+
+          // 讓出 30ms 觸發 Safari GC
           await new Promise(r => setTimeout(r, 30));
         }
 
         statusText.textContent = '封裝輸出檔案中...';
         progressBarFill.style.width = '100%';
 
-        const finalPdfBytes = await newPdf.save();
-        compressedPdfBlob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+        compressedPdfBlob = doc.output('blob');
         const finalSizeMB = (compressedPdfBlob.size / (1024 * 1024)).toFixed(2);
 
         statusText.textContent = '壓縮完成！';
