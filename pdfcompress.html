@@ -667,7 +667,7 @@
       if (parseFloat(rawEstMB) > targetMB) {
         estimateText.className = 'estimate-size status-capped';
         estimateText.textContent = `約 ${rawEstMB} MB (超出上限)`;
-        estimateSubtip.textContent = `⚠️ 當前參數超出上限。壓縮時將自動啟動階梯式微調（Quality 至 85% → Scale 至 2.5x → 進一步雙向微調），確保嚴格壓在 ${targetMB.toFixed(1)} MB 內。`;
+        estimateSubtip.textContent = `⚠️ 當前參數超出上限。壓縮時將自動啟動階梯式微調，確保嚴格壓在 ${targetMB.toFixed(1)} MB 內。`;
       } else {
         estimateText.className = 'estimate-size status-ok';
         estimateText.textContent = `約 ${rawEstMB} MB / 上限 ${targetMB.toFixed(1)} MB`;
@@ -888,7 +888,7 @@
         // 明確輸出每頁的 Scale 與 Quality
         const pageChipsHtml = pageDetails.map(p => `
           <div class="page-quality-chip">
-            第 ${p.page} 頁: Scale ${p.scale}x · Quality ${p.quality}% <span class="kb">(${p.sizeKB} KB)</span>
+            第 ${p.page} 頁: ${p.scale}x (${p.quality}%) <span class="kb">(${p.sizeKB} KB)</span>
           </div>
         `).join('');
 
@@ -896,7 +896,7 @@
           <div style="text-align: left; margin-bottom: 8px;">
             <strong>原始大小：</strong>${originalFileSizeMB} MB<br>
             <strong>壓縮後大小：</strong><span style="font-size: 1.15rem; color: #15803d; font-weight: 700;">${finalSizeMB} MB</span><br>
-            <strong>設定上限：</strong>${targetMB.toFixed(1)} MB (嚴格防超標生效)
+            <strong>設定上限：</strong>${targetMB.toFixed(1)} MB
           </div>
           <div class="page-breakdown-title">📄 每頁實際參數與分配容量：</div>
           <div class="page-quality-grid">
