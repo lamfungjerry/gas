@@ -120,7 +120,6 @@
       align-items: center;
     }
 
-    /* 單行排版：54px 輸入框 + 2/5/10 MB */
     .size-input-row {
       display: flex;
       align-items: center;
@@ -342,7 +341,7 @@
       background: #ffffff;
       border: 1px solid #86efac;
       color: #15803d;
-      padding: 4px 8px;
+      padding: 5px 8px;
       border-radius: 6px;
       font-size: 0.78rem;
       font-weight: 600;
@@ -417,15 +416,15 @@
           </div>
         </div>
 
-        <!-- Quality 調整 (預設鎖定 98%，不隨上傳改變，支援手動微調) -->
+        <!-- Quality 調整 (預設鎖定 95%，上傳時不自動變更，支援手動微調) -->
         <div class="slider-row">
           <div class="slider-header">
             <span>壓縮畫質 (Quality)：</span>
-            <span id="qualityValBadge" class="val-badge">98%</span>
+            <span id="qualityValBadge" class="val-badge">95%</span>
           </div>
           <div class="slider-stepper-wrap">
             <button type="button" class="step-btn" id="qualityMinusBtn" title="減少 1%">−</button>
-            <input type="range" id="qualitySlider" min="50" max="100" step="1" value="98" />
+            <input type="range" id="qualitySlider" min="50" max="100" step="1" value="95" />
             <button type="button" class="step-btn" id="qualityPlusBtn" title="增加 1%">+</button>
           </div>
         </div>
@@ -462,7 +461,7 @@
       }
     }
 
-    // 防止 iOS 連續點擊時放大畫面
+    // 防止 iOS 連續點擊時觸發縮放
     let lastTouchTime = 0;
     document.addEventListener('touchend', (e) => {
       const now = Date.now();
@@ -511,7 +510,7 @@
     let loadedPdfDoc = null;
     let totalPagesCount = 1;
 
-    // 基準取樣：第 1 頁在 scale=2.0, quality=0.98 時的真實位元組
+    // 基準取樣：第 1 頁在 scale=2.0, quality=0.95 時的真實位元組
     let sampleBaseBytesAt2x = 0;
 
     function setTargetSize(val) {
@@ -549,11 +548,11 @@
         loadedPdfDoc = await pdfjsLib.getDocument({ data: fileData }).promise;
         totalPagesCount = loadedPdfDoc.numPages;
 
-        // 僅以 98% 畫質取樣，不改變使用者的 Quality 設定
+        // 僅以 95% 畫質取樣，不變更 Quality 滑桿數值
         await calibrateSamplePage(loadedPdfDoc);
 
         tuningPanel.style.display = 'flex';
-        // Quality 保持當前設定（預設 98%），只自動調整 Scale
+        // Quality 保持 95%（或使用者當前設定），只自動計算 Scale
         autoTuneScale();
         startCompressBtn.disabled = false;
         progressBox.style.display = 'none';
@@ -574,7 +573,7 @@
       const ctx = canvas.getContext('2d');
 
       await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
-      const sampleUrl = canvas.toDataURL('image/jpeg', 0.98);
+      const sampleUrl = canvas.toDataURL('image/jpeg', 0.95);
       sampleBaseBytesAt2x = Math.round((sampleUrl.length - 23) * 0.75);
 
       canvas.width = 0;
@@ -594,9 +593,8 @@
       // 瞄準 93% 飽和度，保留安全餘量
       const aimPageBudget = perPageBudget * 0.93;
 
-      // 根據當前使用者手動設定的 Quality 計算係數
       const userQuality = parseInt(qualitySlider.value, 10);
-      const qFactor = userQuality === 100 ? 1.4 : Math.pow(userQuality / 98, 1.5);
+      const qFactor = userQuality === 100 ? 1.4 : Math.pow(userQuality / 95, 1.5);
 
       let calculatedScale = 2.0 * Math.sqrt(aimPageBudget / (sampleBaseBytesAt2x * qFactor));
       calculatedScale = Math.min(Math.max(calculatedScale, 1.0), 5.5);
@@ -661,7 +659,7 @@
       const quality = parseInt(qualitySlider.value, 10);
       const targetMB = parseFloat(targetSizeInput.value) || 2;
 
-      const qFactor = quality === 100 ? 1.4 : Math.pow(quality / 98, 1.5);
+      const qFactor = quality === 100 ? 1.4 : Math.pow(quality / 95, 1.5);
       const estPageBytes = sampleBaseBytesAt2x * Math.pow(scale / 2.0, 2) * qFactor;
       const estTotalBytes = (estPageBytes * totalPagesCount) + (35 * 1024);
       const rawEstMB = (estTotalBytes / (1024 * 1024)).toFixed(2);
@@ -669,7 +667,7 @@
       if (parseFloat(rawEstMB) > targetMB) {
         estimateText.className = 'estimate-size status-capped';
         estimateText.textContent = `約 ${rawEstMB} MB (超出上限)`;
-        estimateSubtip.textContent = `⚠️ 當前參數超出設定上限。壓縮時將自動啟動「最後調整」保底，確保輸出嚴格壓在 ${targetMB.toFixed(1)} MB 內。`;
+        estimateSubtip.textContent = `⚠️ 當前參數超出上限。壓縮時將自動啟動階梯式微調（Quality 至 85% → Scale 至 2.5x → 進一步雙向微調），確保嚴格壓在 ${targetMB.toFixed(1)} MB 內。`;
       } else {
         estimateText.className = 'estimate-size status-ok';
         estimateText.textContent = `約 ${rawEstMB} MB / 上限 ${targetMB.toFixed(1)} MB`;
@@ -680,7 +678,6 @@
     async function shareOrDownloadPdf(blob, filename) {
       const file = new File([blob], filename, { type: 'application/pdf' });
 
-      // 嚴格不傳 title，防止 iOS 產生多餘的 txt 檔案
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({ files: [file] });
@@ -702,24 +699,120 @@
       }, 1000);
     }
 
-    // 單頁渲染輔助函數
-    async function renderPageToJpeg(page, scale, quality) {
-      const vp = page.getViewport({ scale: scale });
-      const canvas = document.createElement('canvas');
-      canvas.width = vp.width;
-      canvas.height = vp.height;
-      const ctx = canvas.getContext('2d');
+    // 核心階梯降級編碼器：先調 Quality (最低 85%) -> 再調 Scale (最低 2.5x) -> 最後逐步微調
+    async function encodePageAdaptive(page, pageBudget, initScale, initQuality) {
+      const baseViewport = page.getViewport({ scale: 1.0 });
+      const origPtWidth = baseViewport.width;
+      const origPtHeight = baseViewport.height;
+
+      let currentScale = initScale;
+      let currentQ = initQuality;
+
+      let canvas = document.createElement('canvas');
+      let ctx = canvas.getContext('2d');
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
-      const dataUrl = canvas.toDataURL('image/jpeg', quality);
-      const byteSize = Math.round((dataUrl.length - 23) * 0.75);
+      async function renderToCanvas(s) {
+        const vp = page.getViewport({ scale: s });
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
+      }
 
+      function getJpegData(q) {
+        const url = canvas.toDataURL('image/jpeg', q);
+        const bytes = Math.round((url.length - 23) * 0.75);
+        return { url, bytes };
+      }
+
+      // 1. 初次以使用者設定的 Scale 繪製畫布
+      await renderToCanvas(currentScale);
+      let res = getJpegData(currentQ);
+
+      // --- 第 1 階梯：先調 Quality（逐步微降，最低為 85%）---
+      if (res.bytes > pageBudget) {
+        let test85 = getJpegData(0.85);
+        if (test85.bytes <= pageBudget) {
+          // 在 0.85 與 currentQ 之間二分搜尋最佳 Quality
+          let lowQ = 0.85;
+          let highQ = currentQ;
+          for (let i = 0; i < 4; i++) {
+            let midQ = (lowQ + highQ) / 2;
+            let t = getJpegData(midQ);
+            if (t.bytes <= pageBudget) {
+              res = t;
+              currentQ = midQ;
+              lowQ = midQ;
+            } else {
+              highQ = midQ;
+            }
+          }
+        } else {
+          // Quality 降到 85% 依然超標，鎖定 Quality = 85%，進入第 2 階梯
+          currentQ = 0.85;
+          res = test85;
+
+          // --- 第 2 階梯：再調 Scale（逐步微降，最低為 2.5x）---
+          let estScale = currentScale * Math.sqrt(pageBudget / res.bytes) * 0.96;
+          estScale = Math.round(estScale * 10) / 10;
+          let targetScaleStage2 = Math.max(estScale, 2.5);
+
+          if (targetScaleStage2 < currentScale) {
+            currentScale = targetScaleStage2;
+            await renderToCanvas(currentScale);
+            res = getJpegData(currentQ);
+          }
+
+          // --- 第 3 階梯：若 Scale 到 2.5x 且 Quality 85% 仍超標，逐步雙向微調 ---
+          if (res.bytes > pageBudget) {
+            // 先嘗試將 Quality 進一步降至 70%
+            let test70 = getJpegData(0.70);
+            if (test70.bytes <= pageBudget) {
+              let low = 0.70;
+              let high = 0.85;
+              for (let i = 0; i < 3; i++) {
+                let mid = (low + high) / 2;
+                let t = getJpegData(mid);
+                if (t.bytes <= pageBudget) {
+                  res = t;
+                  currentQ = mid;
+                  low = mid;
+                } else {
+                  high = mid;
+                }
+              }
+            } else {
+              // Quality 70% 仍超標，Quality 固定 75%，調降 Scale 直至塞進預算
+              currentQ = 0.75;
+              let finalScale = currentScale * Math.sqrt(pageBudget / test70.bytes) * 0.94;
+              currentScale = Math.max(Math.round(finalScale * 10) / 10, 1.0);
+              await renderToCanvas(currentScale);
+              res = getJpegData(currentQ);
+
+              // 極端防線：微調 Quality 確保絕不超標
+              if (res.bytes > pageBudget) {
+                let qFallback = Math.max(currentQ * (pageBudget / res.bytes), 0.50);
+                res = getJpegData(qFallback);
+                currentQ = qFallback;
+              }
+            }
+          }
+        }
+      }
+
+      // 清除 Canvas 顯存
       canvas.width = 0;
       canvas.height = 0;
 
-      return { dataUrl, byteSize, width: vp.width, height: vp.height };
+      return {
+        dataUrl: res.url,
+        byteSize: res.bytes,
+        scale: currentScale.toFixed(1),
+        quality: Math.round(currentQ * 100),
+        origPtWidth,
+        origPtHeight
+      };
     }
 
     startCompressBtn.addEventListener('click', async () => {
@@ -736,7 +829,6 @@
       const targetMB = parseFloat(targetSizeInput.value) || 2;
       const targetTotalBytes = targetMB * 1024 * 1024;
       const pdfOverheadBytes = 35 * 1024;
-      // 保證 96% 預算上限，絕不突破目標 MB
       const netBudget = Math.max((targetTotalBytes - pdfOverheadBytes) * 0.96, 60 * 1024);
 
       startCompressBtn.disabled = true;
@@ -758,52 +850,31 @@
           progressBarFill.style.width = `${Math.round(((pageNum - 1) / totalPagesCount) * 100)}%`;
 
           const page = await loadedPdfDoc.getPage(pageNum);
-          const baseViewport = page.getViewport({ scale: 1.0 });
-          const origPtWidth = baseViewport.width;
-          const origPtHeight = baseViewport.height;
-
-          let currentScale = userScale;
-          let currentQ = userQuality;
-          let rendered = await renderPageToJpeg(page, currentScale, currentQ);
-
-          // 【最後調整保底機制：絕不超出上限】
-          if (rendered.byteSize > pageBudget) {
-            statusText.textContent = `第 ${pageNum} 頁調整預算中...`;
-            // 優先自動下修 Scale 重新渲染
-            currentScale = currentScale * Math.sqrt(pageBudget / rendered.byteSize) * 0.95;
-            currentScale = Math.round(currentScale * 10) / 10;
-            if (currentScale < 1.0) currentScale = 1.0;
-
-            rendered = await renderPageToJpeg(page, currentScale, currentQ);
-
-            // 若依然超出配額，微調 Quality 作為第二道防線
-            if (rendered.byteSize > pageBudget) {
-              currentQ = Math.max(currentQ * 0.92, 0.65);
-              rendered = await renderPageToJpeg(page, currentScale, currentQ);
-            }
-          }
+          
+          // 執行階梯漸進調整演算法
+          const encoded = await encodePageAdaptive(page, pageBudget, userScale, userQuality);
 
           pageDetails.push({
             page: pageNum,
-            scale: currentScale.toFixed(1),
-            quality: Math.round(currentQ * 100),
-            sizeKB: Math.round(rendered.byteSize / 1024)
+            scale: encoded.scale,
+            quality: encoded.quality,
+            sizeKB: Math.round(encoded.byteSize / 1024)
           });
-          usedBytes += rendered.byteSize;
+          usedBytes += encoded.byteSize;
 
-          const orientation = origPtWidth > origPtHeight ? 'l' : 'p';
+          const orientation = encoded.origPtWidth > encoded.origPtHeight ? 'l' : 'p';
           if (pageNum === 1) {
             doc = new jsPDFConstructor({
               orientation: orientation,
               unit: 'pt',
-              format: [origPtWidth, origPtHeight],
+              format: [encoded.origPtWidth, encoded.origPtHeight],
               compress: true
             });
           } else {
-            doc.addPage([origPtWidth, origPtHeight], orientation);
+            doc.addPage([encoded.origPtWidth, encoded.origPtHeight], orientation);
           }
 
-          doc.addImage(rendered.dataUrl, 'JPEG', 0, 0, origPtWidth, origPtHeight, undefined, 'SLOW');
+          doc.addImage(encoded.dataUrl, 'JPEG', 0, 0, encoded.origPtWidth, encoded.origPtHeight, undefined, 'SLOW');
 
           await new Promise(r => setTimeout(r, 40));
         }
@@ -814,9 +885,10 @@
         compressedPdfBlob = doc.output('blob');
         const finalSizeMB = (compressedPdfBlob.size / (1024 * 1024)).toFixed(2);
 
+        // 明確輸出每頁的 Scale 與 Quality
         const pageChipsHtml = pageDetails.map(p => `
           <div class="page-quality-chip">
-            第 ${p.page} 頁: ${p.scale}x (${p.quality}%) <span class="kb">(${p.sizeKB} KB)</span>
+            第 ${p.page} 頁: Scale ${p.scale}x · Quality ${p.quality}% <span class="kb">(${p.sizeKB} KB)</span>
           </div>
         `).join('');
 
@@ -824,7 +896,7 @@
           <div style="text-align: left; margin-bottom: 8px;">
             <strong>原始大小：</strong>${originalFileSizeMB} MB<br>
             <strong>壓縮後大小：</strong><span style="font-size: 1.15rem; color: #15803d; font-weight: 700;">${finalSizeMB} MB</span><br>
-            <strong>設定上限：</strong>${targetMB.toFixed(1)} MB (上限安全防護生效)
+            <strong>設定上限：</strong>${targetMB.toFixed(1)} MB (嚴格防超標生效)
           </div>
           <div class="page-breakdown-title">📄 每頁實際參數與分配容量：</div>
           <div class="page-quality-grid">
