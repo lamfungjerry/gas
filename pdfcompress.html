@@ -171,6 +171,37 @@
       color: #2563eb;
     }
 
+    /* 優化選項開關區塊 */
+    .opt-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-top: 2px;
+    }
+    .opt-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #4b5563;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      flex: 1;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    .opt-chip input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      accent-color: #2563eb;
+    }
+
     .tuning-panel {
       display: none;
       flex-direction: column;
@@ -189,14 +220,33 @@
     .slider-header {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 0.85rem;
       font-weight: 600;
       color: #4b5563;
+    }
+    .val-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .slider-header span.val-badge {
       color: #2563eb;
       font-weight: 700;
     }
+
+    /* pt 尺寸標籤 */
+    .tag-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      display: inline-block;
+    }
+    .tag-huge { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .tag-large { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+    .tag-medium { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+    .tag-small { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
     
     .slider-stepper-wrap {
       display: flex;
@@ -241,6 +291,7 @@
       border: 1px solid #e2e8f0;
       border-radius: 8px;
     }
+    /* 嚴格保持單行排版 */
     .estimate-row {
       display: flex;
       justify-content: space-between;
@@ -409,13 +460,32 @@
         </div>
       </div>
 
+      <!-- 優化功能開關 -->
+      <div class="opt-group">
+        <label class="opt-chip">
+          <input type="checkbox" id="a4Toggle" checked>
+          <span>統一 A4 邊界</span>
+        </label>
+        <label class="opt-chip">
+          <input type="checkbox" id="grayToggle">
+          <span>黑白灰階</span>
+        </label>
+        <label class="opt-chip">
+          <input type="checkbox" id="contrastToggle">
+          <span>淨白增晰</span>
+        </label>
+      </div>
+
       <!-- 試算與微調面板 -->
       <div id="tuningPanel" class="tuning-panel">
-        <!-- Scale 調整 (基於原生 pt 自動測算最適倍率) -->
+        <!-- Scale 調整 (顯示 pt 尺寸級別 Tag) -->
         <div class="slider-row">
           <div class="slider-header">
             <span>解析度倍率 (Scale)：</span>
-            <span id="scaleValBadge" class="val-badge">2.0x</span>
+            <div class="val-wrap">
+              <span id="scaleSizeTag" class="tag-badge tag-medium">中</span>
+              <span id="scaleValBadge" class="val-badge">2.0x</span>
+            </div>
           </div>
           <div class="slider-stepper-wrap">
             <button type="button" class="step-btn" id="scaleMinusBtn" title="減少 0.1x">−</button>
@@ -469,11 +539,10 @@
       }
     }
 
-    // 防止 iOS 連續點擊時放大畫面
     let lastTouchTime = 0;
     document.addEventListener('touchend', (e) => {
       const now = Date.now();
-      if (e.target.closest('button, .chip, .step-btn, h1')) {
+      if (e.target.closest('button, .chip, .step-btn, .opt-chip, h1')) {
         if (now - lastTouchTime <= 300) {
           e.preventDefault();
           e.target.click();
@@ -490,8 +559,13 @@
     const targetSizeInput = document.getElementById('targetSizeInput');
     const tuningPanel = document.getElementById('tuningPanel');
 
+    const a4Toggle = document.getElementById('a4Toggle');
+    const grayToggle = document.getElementById('grayToggle');
+    const contrastToggle = document.getElementById('contrastToggle');
+
     const scaleSlider = document.getElementById('scaleSlider');
     const scaleValBadge = document.getElementById('scaleValBadge');
+    const scaleSizeTag = document.getElementById('scaleSizeTag');
     const scaleMinusBtn = document.getElementById('scaleMinusBtn');
     const scalePlusBtn = document.getElementById('scalePlusBtn');
 
@@ -518,13 +592,11 @@
     let loadedPdfDoc = null;
     let totalPagesCount = 1;
 
-    // 原生尺寸與基準位元組
     let nativePtW = 595;
     let nativePtH = 842;
     let sampleBaseBytes = 0;
     let sampleBaseScale = 2.0;
 
-    // iPhone 記憶體與清晰度黃金平衡：單頁畫布目標總像素約 550 ~ 650 萬
     const TARGET_PAGE_PIXELS = 6000000;
 
     function setTargetSize(val) {
@@ -541,6 +613,14 @@
         c.classList.toggle('active', parseFloat(c.textContent) === val);
       });
       autoTuneScale();
+    });
+
+    [a4Toggle, grayToggle, contrastToggle].forEach(toggle => {
+      toggle.addEventListener('change', () => {
+        if (loadedPdfDoc) {
+          calibrateSamplePage(loadedPdfDoc).then(() => autoTuneScale());
+        }
+      });
     });
 
     fileInput.addEventListener('change', async (e) => {
@@ -561,11 +641,11 @@
         loadedPdfDoc = await pdfjsLib.getDocument({ data: fileData }).promise;
         totalPagesCount = loadedPdfDoc.numPages;
 
-        // 讀取第 1 頁原生 pt 尺寸並實測取樣
         await calibrateSamplePage(loadedPdfDoc);
 
-        // 簡潔呈現：檔名 (大小 · 長x寬 pt)
         fileNameDisplay.textContent = `${file.name} (${originalFileSizeMB} MB · ${nativePtW}×${nativePtH} pt)`;
+
+        updateSizeTag();
 
         tuningPanel.style.display = 'flex';
         autoTuneScale();
@@ -577,13 +657,30 @@
       }
     });
 
+    function updateSizeTag() {
+      const maxPt = Math.max(nativePtW, nativePtH);
+      scaleSizeTag.className = 'tag-badge';
+      if (maxPt >= 2000) {
+        scaleSizeTag.textContent = '特大';
+        scaleSizeTag.classList.add('tag-huge');
+      } else if (maxPt >= 1000) {
+        scaleSizeTag.textContent = '大';
+        scaleSizeTag.classList.add('tag-large');
+      } else if (maxPt >= 600) {
+        scaleSizeTag.textContent = '中';
+        scaleSizeTag.classList.add('tag-medium');
+      } else {
+        scaleSizeTag.textContent = '細';
+        scaleSizeTag.classList.add('tag-small');
+      }
+    }
+
     async function calibrateSamplePage(pdfDoc) {
       const page = await pdfDoc.getPage(1);
       const vp1 = page.getViewport({ scale: 1.0 });
       nativePtW = Math.round(vp1.width);
       nativePtH = Math.round(vp1.height);
 
-      // 基於目標總像素量動態決定測試取樣倍率，避免特大海報閃退
       const nativeArea = Math.max(nativePtW * nativePtH, 100000);
       sampleBaseScale = Math.min(Math.max(Math.sqrt(TARGET_PAGE_PIXELS / nativeArea), 0.8), 2.5);
       sampleBaseScale = Math.round(sampleBaseScale * 10) / 10;
@@ -594,6 +691,8 @@
       canvas.height = vp.height;
       const ctx = canvas.getContext('2d');
 
+      applyCanvasFilters(ctx);
+
       await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
       const sampleUrl = canvas.toDataURL('image/jpeg', 0.95);
       sampleBaseBytes = Math.round((sampleUrl.length - 23) * 0.75);
@@ -602,7 +701,13 @@
       canvas.height = 0;
     }
 
-    // 基於「原生 pt + 檔案容量預算」雙軌計算最適 Scale
+    function applyCanvasFilters(ctx) {
+      let filters = [];
+      if (grayToggle.checked) filters.push('grayscale(100%)');
+      if (contrastToggle.checked) filters.push('contrast(115%) brightness(105%)');
+      ctx.filter = filters.length > 0 ? filters.join(' ') : 'none';
+    }
+
     function autoTuneScale() {
       if (!loadedPdfDoc || sampleBaseBytes === 0) return;
 
@@ -615,14 +720,10 @@
       const userQuality = parseInt(qualitySlider.value, 10);
       const qFactor = userQuality === 100 ? 1.4 : Math.pow(userQuality / 95, 1.5);
 
-      // 1. 容量層面推算的 Scale
       let scaleBySize = sampleBaseScale * Math.sqrt(perPageBudget / (sampleBaseBytes * qFactor));
-
-      // 2. 像素預算層面推算的安全 Scale 上限（防止大圖閃退）
       const nativeArea = Math.max(nativePtW * nativePtH, 100000);
       let maxScaleByPixels = Math.sqrt(TARGET_PAGE_PIXELS / nativeArea);
 
-      // 取平衡值，嚴防海報與 A4 超標
       let calculatedScale = Math.min(scaleBySize, maxScaleByPixels);
       calculatedScale = Math.min(Math.max(calculatedScale, 0.5), 5.5);
       calculatedScale = Math.round(calculatedScale * 10) / 10;
@@ -633,7 +734,6 @@
       updateEstimate();
     }
 
-    // Scale 控制事件
     scaleSlider.addEventListener('input', () => {
       scaleValBadge.textContent = parseFloat(scaleSlider.value).toFixed(1) + 'x';
       updateEstimate();
@@ -657,7 +757,6 @@
       }
     });
 
-    // Quality 控制事件
     qualitySlider.addEventListener('input', () => {
       qualityValBadge.textContent = qualitySlider.value + '%';
       updateEstimate();
@@ -726,11 +825,24 @@
       }, 1000);
     }
 
-    // 核心階梯降級編碼器
     async function encodePageAdaptive(page, pageBudget, initScale, initQuality) {
       const baseViewport = page.getViewport({ scale: 1.0 });
-      const origPtWidth = baseViewport.width;
-      const origPtHeight = baseViewport.height;
+      let origPtWidth = baseViewport.width;
+      let origPtHeight = baseViewport.height;
+
+      // 統一 A4 邊界計算（任一邊達到 A4 MAX，另一邊等比縮放，不改比例、不補白）
+      let targetPtW = origPtWidth;
+      let targetPtH = origPtHeight;
+
+      if (a4Toggle.checked) {
+        const isLandscape = origPtWidth > origPtHeight;
+        const maxA4W = isLandscape ? 841.89 : 595.28;
+        const maxA4H = isLandscape ? 595.28 : 841.89;
+
+        const ratio = Math.min(maxA4W / origPtWidth, maxA4H / origPtHeight);
+        targetPtW = Math.round(origPtWidth * ratio * 100) / 100;
+        targetPtH = Math.round(origPtHeight * ratio * 100) / 100;
+      }
 
       let currentScale = initScale;
       let currentQ = initQuality;
@@ -744,6 +856,7 @@
         const vp = page.getViewport({ scale: s });
         canvas.width = vp.width;
         canvas.height = vp.height;
+        applyCanvasFilters(ctx);
         await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
       }
 
@@ -830,8 +943,8 @@
         byteSize: res.bytes,
         scale: currentScale.toFixed(1),
         quality: Math.round(currentQ * 100),
-        origPtWidth,
-        origPtHeight
+        targetPtW,
+        targetPtH
       };
     }
 
@@ -880,19 +993,19 @@
           });
           usedBytes += encoded.byteSize;
 
-          const orientation = encoded.origPtWidth > encoded.origPtHeight ? 'l' : 'p';
+          const orientation = encoded.targetPtW > encoded.targetPtH ? 'l' : 'p';
           if (pageNum === 1) {
             doc = new jsPDFConstructor({
               orientation: orientation,
               unit: 'pt',
-              format: [encoded.origPtWidth, encoded.origPtHeight],
+              format: [encoded.targetPtW, encoded.targetPtH],
               compress: true
             });
           } else {
-            doc.addPage([encoded.origPtWidth, encoded.origPtHeight], orientation);
+            doc.addPage([encoded.targetPtW, encoded.targetPtH], orientation);
           }
 
-          doc.addImage(encoded.dataUrl, 'JPEG', 0, 0, encoded.origPtWidth, encoded.origPtHeight, undefined, 'SLOW');
+          doc.addImage(encoded.dataUrl, 'JPEG', 0, 0, encoded.targetPtW, encoded.targetPtH, undefined, 'SLOW');
 
           await new Promise(r => setTimeout(r, 40));
         }
