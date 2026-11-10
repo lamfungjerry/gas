@@ -679,16 +679,20 @@
 
     async function shareOrDownloadPdf(blob, filename) {
       const file = new File([blob], filename, { type: 'application/pdf' });
-
+    
+      // 關鍵修正：只傳入 files，絕不傳入 title 或 text，避免 iOS 自動產生 .txt 檔
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: filename });
+          await navigator.share({
+            files: [file]
+          });
           return;
         } catch (err) {
           if (err.name === 'AbortError') return;
         }
       }
-
+    
+      // 備用下載機制
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
