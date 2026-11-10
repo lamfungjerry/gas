@@ -22,6 +22,8 @@
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       -webkit-tap-highlight-color: transparent;
+      /* 停用 iOS 連續雙擊畫面放大的手勢延遲與縮放行為 */
+      touch-action: manipulation;
     }
     body {
       background-color: #f3f4f6;
@@ -44,6 +46,7 @@
       margin-bottom: 6px;
       font-weight: 700;
       user-select: none;
+      -webkit-user-select: none;
       cursor: pointer;
     }
     p.desc {
@@ -92,6 +95,8 @@
       font-weight: 600;
       font-size: 0.92rem;
       text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .file-name-text {
       display: block;
@@ -108,44 +113,59 @@
       gap: 8px;
     }
     .setting-label {
-      font-size: 0.88rem;
+      font-size: 0.86rem;
       font-weight: 600;
       color: #374151;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
+
+    /* 嚴格單行排列：縮小輸入框，完整塞入一行 */
     .size-input-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
+      flex-wrap: nowrap;
+      width: 100%;
     }
     .size-input-row input[type="number"] {
-      width: 86px;
-      padding: 8px 10px;
-      font-size: 1rem;
-      font-weight: 600;
+      width: 54px;
+      padding: 6px 4px;
+      font-size: 0.95rem;
+      font-weight: 700;
       border: 1px solid #d1d5db;
       border-radius: 8px;
       text-align: center;
       background: #ffffff;
+      flex-shrink: 0;
+    }
+    .unit-text {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #4b5563;
+      margin-right: 4px;
+      flex-shrink: 0;
     }
     .quick-chips {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       flex: 1;
+      justify-content: flex-end;
     }
     .chip {
-      padding: 8px 14px;
+      padding: 6px 12px;
       background: #ffffff;
       border: 1px solid #d1d5db;
       border-radius: 8px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
       color: #4b5563;
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
+      transition: all 0.15s;
     }
     .chip.active {
       background: #eff6ff;
@@ -179,32 +199,32 @@
       font-weight: 700;
     }
     
-    /* 滑桿與 +- 按鈕組合 */
+    /* 簡約輕量化 +- 按鈕 */
     .slider-stepper-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .step-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      background: #f9fafb;
-      color: #1f2937;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: #f1f5f9;
+      color: #2563eb;
       font-size: 1.25rem;
-      font-weight: 700;
+      font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
       flex-shrink: 0;
-      transition: all 0.15s;
+      transition: background-color 0.15s;
     }
     .step-btn:active {
-      background: #e5e7eb;
-      transform: scale(0.94);
+      background: #dbeafe;
     }
     input[type="range"] {
       flex: 1;
@@ -255,6 +275,8 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .btn-action:active { background-color: #1d4ed8; }
     .btn-action:disabled { background-color: #9ca3af; cursor: not-allowed; }
@@ -344,6 +366,8 @@
       font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .save-btn:active { background-color: #15803d; }
   </style>
@@ -362,7 +386,7 @@
         <span id="fileNameDisplay" class="file-name-text">未選擇任何檔案</span>
       </div>
 
-      <!-- 容量上限設定 -->
+      <!-- 容量上限設定 (單行排版：54px 輸入框 + 2/5/10 MB) -->
       <div class="setting-group">
         <div class="setting-label">
           <span>目標檔案大小上限：</span>
@@ -370,7 +394,7 @@
         </div>
         <div class="size-input-row">
           <input type="number" id="targetSizeInput" min="1" max="20" step="0.5" value="2" />
-          <span style="font-weight: 600;">MB</span>
+          <span class="unit-text">MB</span>
           <div class="quick-chips">
             <span class="chip active" onclick="setTargetSize(2)">2 MB</span>
             <span class="chip" onclick="setTargetSize(5)">5 MB</span>
@@ -381,7 +405,7 @@
 
       <!-- 試算與微調面板 -->
       <div id="tuningPanel" class="tuning-panel">
-        <!-- Scale 調整與 +- 按鈕 -->
+        <!-- Scale 調整與簡約 +- 鈕 -->
         <div class="slider-row">
           <div class="slider-header">
             <span>解析度倍率 (Scale)：</span>
@@ -394,7 +418,7 @@
           </div>
         </div>
 
-        <!-- Quality 調整與 +- 按鈕 -->
+        <!-- Quality 調整與簡約 +- 鈕 -->
         <div class="slider-row">
           <div class="slider-header">
             <span>壓縮畫質 (Quality)：</span>
@@ -438,6 +462,19 @@
         history.back();
       }
     }
+
+    // 徹底阻斷 iOS 快速點擊按鈕或連續觸控時觸發的雙擊縮放手勢
+    let lastTouchTime = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (e.target.closest('button, .chip, .step-btn, h1')) {
+        if (now - lastTouchTime <= 300) {
+          e.preventDefault();
+          e.target.click(); // 手動觸發點擊，防止 iOS 吃掉點擊事件
+        }
+      }
+      lastTouchTime = now;
+    }, { passive: false });
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -569,7 +606,7 @@
       updateEstimate();
     }
 
-    // Scale 滑桿與 +- 按鈕事件
+    // Scale 滑桿與 +- 微調
     scaleSlider.addEventListener('input', () => {
       scaleValBadge.textContent = parseFloat(scaleSlider.value).toFixed(1) + 'x';
       updateEstimate();
@@ -593,7 +630,7 @@
       }
     });
 
-    // Quality 滑桿與 +- 按鈕事件
+    // Quality 滑桿與 +- 微調
     qualitySlider.addEventListener('input', () => {
       qualityValBadge.textContent = qualitySlider.value + '%';
       updateEstimate();
