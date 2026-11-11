@@ -3,20 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>證件 A4工具</title>
+  <title>證件 A4 1:1 影印工具</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
       --bg: #121212;
       --card-bg: #1c1c1e;
       --primary: #007aff;
+      --success: #30d158;
       --text: #f5f5f7;
       --subtext: #8e8e93;
       --border: #2c2c2e;
-      --accent: #30d158;
     }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
     
+    /* 停用雙擊縮放與反彈滾動 */
+    * { 
+      box-sizing: border-box; 
+      -webkit-tap-highlight-color: transparent; 
+      margin: 0; 
+      padding: 0;
+      touch-action: manipulation;
+    }
+
     html, body {
       height: 100dvh;
       overflow: hidden;
@@ -30,30 +38,30 @@
       flex-direction: column;
       justify-content: space-between;
       align-items: center;
-      padding: calc(env(safe-area-inset-top) + 4px) 14px calc(env(safe-area-inset-bottom) + 8px) 14px;
+      padding: calc(env(safe-area-inset-top) + 6px) 14px calc(env(safe-area-inset-bottom) + 10px) 14px;
     }
 
     /* 頂部標題 */
     .app-title {
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 700;
       text-align: center;
-      margin: 2px 0;
       cursor: pointer;
       user-select: none;
+      padding: 2px 0;
     }
     .app-title:active { opacity: 0.6; }
 
-    /* 緊湊控制面板 */
+    /* 控制面板 */
     .panel {
       width: 100%;
       max-width: 420px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
     }
 
-    /* 上傳卡片 */
+    /* 上傳卡片區 */
     .upload-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -63,7 +71,7 @@
       background: var(--card-bg);
       border: 1.5px dashed var(--border);
       border-radius: 10px;
-      height: 68px;
+      height: 82px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -76,28 +84,36 @@
       height: 100%;
       object-fit: contain;
       display: none;
+      z-index: 2;
     }
     .upload-box span {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--subtext);
       pointer-events: none;
+      z-index: 2;
     }
-    .upload-box input {
+    /* 透明 input 設為 z-index: 1 */
+    .upload-box input[type="file"] {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
       opacity: 0;
+      z-index: 1;
+      cursor: pointer;
     }
+    /* 旋轉按鈕提升至 z-index: 10，防止被 input 攔截 */
     .rot-btn {
       position: absolute;
-      bottom: 3px;
-      right: 3px;
-      background: rgba(0,0,0,0.7);
+      bottom: 5px;
+      right: 5px;
+      z-index: 10;
+      background: rgba(40, 40, 40, 0.85);
       border: 1px solid #555;
       color: #fff;
-      font-size: 10px;
-      padding: 1px 5px;
-      border-radius: 4px;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 5px;
       display: none;
+      cursor: pointer;
     }
 
     /* 控制行通用設定 */
@@ -105,10 +121,10 @@
       display: flex;
       align-items: center;
       background: var(--card-bg);
-      border-radius: 8px;
-      padding: 2px 6px;
+      border-radius: 9px;
+      padding: 2px 8px;
       border: 1px solid var(--border);
-      height: 32px;
+      height: 33px;
       gap: 6px;
     }
     .control-label {
@@ -137,7 +153,7 @@
       color: #fff;
     }
 
-    /* Quality 步進控制器 */
+    /* Quality 步進控制 */
     .step-btn {
       background: #2c2c2e;
       border: none;
@@ -145,7 +161,7 @@
       width: 26px;
       height: 24px;
       border-radius: 5px;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: bold;
       display: flex;
       align-items: center;
@@ -165,20 +181,27 @@
       color: var(--text);
       font-variant-numeric: tabular-nums;
     }
+    .est-badge {
+      font-size: 11px;
+      color: #ff9f0a;
+      white-space: nowrap;
+      margin-left: 2px;
+      font-variant-numeric: tabular-nums;
+    }
 
     /* 微型 A4 示意預覽區 */
     .preview-container {
-      height: 110px;
+      height: 120px;
       aspect-ratio: 210 / 297;
       background: #ffffff;
-      margin: 2px auto;
+      margin: 1px auto;
       border-radius: 3px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      gap: 6px;
       padding: 6px;
     }
     .card-preview {
@@ -197,53 +220,70 @@
       object-fit: cover;
     }
 
-    /* 底部按鈕 */
+    /* 匯出結果提示欄 */
+    .result-info {
+      display: none;
+      background: rgba(48, 209, 88, 0.12);
+      border: 1px solid var(--success);
+      color: var(--success);
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 6px 10px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    /* 底部按鈕區 */
     .action-bar {
       width: 100%;
       max-width: 420px;
-      padding-top: 4px;
     }
-    .export-btn {
+    .action-btn {
       width: 100%;
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 12px;
+      padding: 13px;
       font-size: 15px;
       font-weight: 600;
-      border-radius: 10px;
+      border-radius: 11px;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
+      transition: background 0.2s;
     }
-    .export-btn:disabled { opacity: 0.35; }
-    .export-btn.success { background: var(--accent); color: #000; }
+    .action-btn:disabled { opacity: 0.35; }
+    .action-btn.download-ready {
+      background: var(--success);
+      color: #000;
+    }
   </style>
 </head>
 <body>
 
-  <!-- 頂部標題與返回 -->
+  <!-- 頂部標題 -->
   <h1 class="app-title" onclick="safeBack()">證件 A4 1:1 影印工具</h1>
 
   <div class="panel">
     <!-- 正反面圖片上傳 -->
     <div class="upload-row">
       <div class="upload-box" id="box-front">
-        <span>+ 正面</span>
+        <span>+ 正面相片</span>
         <img id="img-front" />
-        <button class="rot-btn" id="rot-front" onclick="rotateCard('front', event)">↻ 90°</button>
-        <input type="file" accept="image/*" onchange="handleFile(this, 'front')">
+        <input type="file" id="file-front" accept="image/*" onchange="handleFile(this, 'front')">
+        <button type="button" class="rot-btn" id="rot-front" onclick="rotateCard('front', event)">↻ 90°</button>
       </div>
       <div class="upload-box" id="box-back">
-        <span>+ 反面</span>
+        <span>+ 反面相片</span>
         <img id="img-back" />
-        <button class="rot-btn" id="rot-back" onclick="rotateCard('back', event)">↻ 90°</button>
-        <input type="file" accept="image/*" onchange="handleFile(this, 'back')">
+        <input type="file" id="file-back" accept="image/*" onchange="handleFile(this, 'back')">
+        <button type="button" class="rot-btn" id="rot-back" onclick="rotateCard('back', event)">↻ 90°</button>
       </div>
     </div>
 
-    <!-- 影印深淺 -->
+    <!-- 影印深淺切換 -->
     <div class="control-row">
       <span class="control-label">深淺</span>
       <div class="btn-group" id="tone-group">
@@ -253,7 +293,7 @@
       </div>
     </div>
 
-    <!-- 上限容量 -->
+    <!-- 容量上限切換 -->
     <div class="control-row">
       <span class="control-label">容量</span>
       <div class="btn-group" id="mb-group">
@@ -264,13 +304,14 @@
       </div>
     </div>
 
-    <!-- Quality 步進控制器 (75% - 100%) -->
+    <!-- Quality 步進控制器 -->
     <div class="control-row">
       <span class="control-label">品質</span>
       <button class="step-btn" onclick="stepQuality(-1)">−</button>
       <input type="range" class="q-slider" id="q-range" min="75" max="100" value="90" oninput="updateQuality(this.value)">
       <button class="step-btn" onclick="stepQuality(1)">+</button>
       <span class="quality-display" id="q-val">90%</span>
+      <span class="est-badge" id="est-display">預計: --</span>
     </div>
 
     <!-- 微型 A4 示意預覽 -->
@@ -280,12 +321,23 @@
     </div>
   </div>
 
-  <!-- 底部匯出按鈕 -->
+  <!-- 底部按鈕區與結果提示 -->
   <div class="action-bar">
-    <button class="export-btn" id="export-btn" onclick="exportPDF()" disabled>匯出 A4 PDF (1:1)</button>
+    <div class="result-info" id="result-info"></div>
+    <button class="action-btn" id="main-btn" onclick="handleMainAction()" disabled>產生 A4 PDF</button>
   </div>
 
   <script>
+    // 禁用 iOS 雙擊縮放
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (e) {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
+
     function safeBack() {
       if (document.referrer && document.referrer.startsWith(window.location.origin)) {
         history.back();
@@ -300,6 +352,17 @@
       quality: 90
     };
 
+    // 儲存生成後的 PDF 快取
+    let generatedResult = null;
+
+    function resetGeneratedState() {
+      generatedResult = null;
+      document.getElementById('result-info').style.display = 'none';
+      const btn = document.getElementById('main-btn');
+      btn.classList.remove('download-ready');
+      updateButtonText();
+    }
+
     function stepQuality(delta) {
       let q = data.quality + delta;
       if (q < 75) q = 75;
@@ -311,6 +374,8 @@
       data.quality = parseInt(val, 10);
       document.getElementById('q-range').value = data.quality;
       document.getElementById('q-val').innerText = `${data.quality}%`;
+      resetGeneratedState();
+      calculateEstimate();
     }
 
     function setTone(threshold, btn) {
@@ -319,12 +384,54 @@
       btn.classList.add('active');
       processAndRender('front');
       processAndRender('back');
+      resetGeneratedState();
     }
 
     function setTargetMB(mb, btn) {
       data.targetMB = mb;
       document.querySelectorAll('#mb-group button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      resetGeneratedState();
+      calculateEstimate();
+    }
+
+    // 即時計算預估容量
+    function calculateEstimate() {
+      const estBadge = document.getElementById('est-display');
+      if (!data.front.img && !data.back.img) {
+        estBadge.innerText = '預計: --';
+        return;
+      }
+
+      let totalPx = 0;
+      if (data.front.canvas.width) totalPx += data.front.canvas.width * data.front.canvas.height;
+      if (data.back.canvas.width) totalPx += data.back.canvas.width * data.back.canvas.height;
+      if (!data.front.img || !data.back.img) totalPx *= 2; // 單張先按雙倍估計
+
+      const qRatio = data.quality / 100;
+      const bpp = 0.05 + Math.pow(qRatio, 3.2) * 0.28;
+      let estBytes = totalPx * bpp + 40000;
+
+      const maxBytes = data.targetMB * 1024 * 1024;
+      if (estBytes > maxBytes) estBytes = maxBytes;
+
+      const estMB = (estBytes / (1024 * 1024)).toFixed(2);
+      estBadge.innerText = `預計: ~${estMB}M`;
+      updateButtonText(estMB);
+    }
+
+    function updateButtonText(estMB) {
+      const btn = document.getElementById('main-btn');
+      if (generatedResult) {
+        btn.innerText = "立即下載 / 分享 PDF";
+        return;
+      }
+      if (data.front.img && data.back.img) {
+        const est = estMB || document.getElementById('est-display').innerText.replace('預計: ~', '');
+        btn.innerText = `產生 A4 PDF (預計 ~${est})`;
+      } else {
+        btn.innerText = "產生 A4 PDF";
+      }
     }
 
     function handleFile(input, side) {
@@ -356,6 +463,8 @@
             document.querySelector(`#box-${side} span`).style.display = 'none';
             processAndRender(side);
             checkReady();
+            resetGeneratedState();
+            calculateEstimate();
           };
           safeImg.src = offCanvas.toDataURL('image/jpeg', 0.95);
         };
@@ -364,10 +473,15 @@
       reader.readAsDataURL(input.files[0]);
     }
 
+    // 解決 90° 點擊被 input 攔截的問題
     function rotateCard(side, e) {
-      e.stopPropagation();
+      if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
       data[side].rot = (data[side].rot + 90) % 360;
       processAndRender(side);
+      resetGeneratedState();
     }
 
     function processAndRender(side) {
@@ -410,11 +524,11 @@
 
     function checkReady() {
       if (data.front.img && data.back.img) {
-        document.getElementById('export-btn').disabled = false;
+        document.getElementById('main-btn').disabled = false;
+        updateButtonText();
       }
     }
 
-    // 梯度壓縮算法：以用戶設定的 Quality 為起點，若超標則每次減 1% (0.01)
     async function getOptimizedJPEG(canvas, maxBytesPerCard, startQuality) {
       let q = startQuality / 100;
       let scale = 1.0;
@@ -435,7 +549,7 @@
           if (blob.size <= maxBytesPerCard) {
             return { blob, finalQ: Math.round(q * 100) };
           }
-          q = parseFloat((q - 0.01).toFixed(2)); // 精確遞減 1%
+          q = parseFloat((q - 0.01).toFixed(2));
         }
 
         scale -= 0.2;
@@ -444,10 +558,16 @@
       return { blob, finalQ: Math.round(q * 100) };
     }
 
-    async function exportPDF() {
-      const btn = document.getElementById('export-btn');
+    // 兩段式按鈕處理：未生成則先產生並顯示數據；已生成則觸發下載
+    async function handleMainAction() {
+      if (generatedResult) {
+        downloadOrSharePDF();
+        return;
+      }
+
+      const btn = document.getElementById('main-btn');
       btn.disabled = true;
-      btn.innerText = "正在處理並壓縮...";
+      btn.innerText = "正在計算並壓縮...";
 
       try {
         const { jsPDF } = window.jspdf;
@@ -456,7 +576,6 @@
         const targetBytes = data.targetMB * 1024 * 1024 - 40 * 1024;
         const maxBytesPerCard = Math.floor(targetBytes / 2);
 
-        // 執行梯級壓縮並獲取最終實際 Quality
         const frontRes = await getOptimizedJPEG(data.front.canvas, maxBytesPerCard, data.quality);
         const backRes = await getOptimizedJPEG(data.back.canvas, maxBytesPerCard, data.quality);
         const actualQuality = Math.min(frontRes.finalQ, backRes.finalQ);
@@ -475,35 +594,46 @@
 
         const pdfBlob = doc.output('blob');
         const finalSizeMB = (pdfBlob.size / (1024 * 1024)).toFixed(2);
-
-        // 匯出結果提示與檔案命名
         const fileName = `ID_Card_A4_1to1_${finalSizeMB}MB_Q${actualQuality}%.pdf`;
-        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file] });
-        } else {
-          const downloadUrl = URL.createObjectURL(pdfBlob);
-          const a = document.createElement('a');
-          a.href = downloadUrl;
-          a.download = `ID_Card.pdf`;
-          a.click();
-          URL.revokeObjectURL(downloadUrl);
-        }
+        // 儲存結果快取
+        generatedResult = {
+          blob: pdfBlob,
+          sizeMB: finalSizeMB,
+          quality: actualQuality,
+          fileName: fileName
+        };
 
-        // 成功反饋，顯示實際大小與最終採用的 Quality
-        btn.classList.add('success');
-        btn.innerText = `✓ ${finalSizeMB}MB (實測 Q: ${actualQuality}%)`;
-        setTimeout(() => {
-          btn.classList.remove('success');
-          btn.innerText = "匯出 A4 PDF (1:1)";
-          btn.disabled = false;
-        }, 4000);
+        // 顯示生成結果詳情
+        const infoEl = document.getElementById('result-info');
+        infoEl.innerHTML = `✓ 已生成：<b>${finalSizeMB} MB</b>｜實際品質：<b>${actualQuality}%</b>`;
+        infoEl.style.display = 'block';
+
+        // 轉換按鈕狀態
+        btn.classList.add('download-ready');
+        btn.innerText = "立即下載 / 分享 PDF";
+        btn.disabled = false;
 
       } catch (err) {
-        alert("匯出失敗: " + err.message);
+        alert("生成失敗: " + err.message);
         btn.disabled = false;
-        btn.innerText = "匯出 A4 PDF (1:1)";
+        updateButtonText();
+      }
+    }
+
+    async function downloadOrSharePDF() {
+      if (!generatedResult) return;
+      const file = new File([generatedResult.blob], generatedResult.fileName, { type: 'application/pdf' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        const downloadUrl = URL.createObjectURL(generatedResult.blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `ID_Card.pdf`;
+        a.click();
+        URL.revokeObjectURL(downloadUrl);
       }
     }
 
