@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>證件 A4 1:1 黑白影印產生器</title>
+  <title>證件 A4 1:1 影印工具</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
@@ -25,6 +25,23 @@
       padding: env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 80px) 12px;
     }
 
+    /* 頂部標題 */
+    .app-title {
+      font-size: 19px;
+      font-weight: 700;
+      text-align: center;
+      margin: 8px 0 4px 0;
+      cursor: pointer;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .app-title:active {
+      opacity: 0.7;
+    }
+
     /* 緊湊控制面板 */
     .panel {
       width: 100%;
@@ -32,7 +49,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 6px;
     }
 
     /* 上傳卡片並排 */
@@ -185,6 +202,9 @@
 </head>
 <body>
 
+  <!-- 頂部標題與返回支援 -->
+  <h1 class="app-title" onclick="safeBack()">證件 A4 1:1 影印工具</h1>
+
   <div class="panel">
     <!-- 正反面圖片上傳 -->
     <div class="upload-row">
@@ -236,6 +256,12 @@
   </div>
 
   <script>
+    function safeBack() {
+      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+        history.back();
+      }
+    }
+
     const data = {
       front: { img: null, rot: 0, canvas: document.getElementById('canvas-front') },
       back: { img: null, rot: 0, canvas: document.getElementById('canvas-back') },
@@ -243,14 +269,12 @@
       targetMB: 2.0
     };
 
-    // 讀取相片並防止 iPhone 48MP Canvas 崩潰
     function handleFile(input, side) {
       if (!input.files || !input.files[0]) return;
       const reader = new FileReader();
       reader.onload = (e) => {
         const rawImg = new Image();
         rawImg.onload = () => {
-          // 下採樣（限制長邊在 2200px 內，既保證打印又避免 Safari 記憶體超載）
           const maxDim = 2200;
           let w = rawImg.width, h = rawImg.height;
           if (w > maxDim || h > maxDim) {
@@ -302,7 +326,6 @@
       btn.classList.add('active');
     }
 
-    // 黑白影印算法（灰階 + 高光淨白截斷 + 對比強化）
     function processAndRender(side) {
       const card = data[side];
       if (!card.img) return;
@@ -327,14 +350,11 @@
       const threshold = data.whiteThreshold;
 
       for (let i = 0; i < d.length; i += 4) {
-        // 標準人眼灰度權重
         let gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
 
-        // 背景去髒：接近白色的底色拉平至純白 (255)
         if (gray > threshold) {
           gray = 255;
         } else {
-          // 文字與邊緣對比強化
           gray = (gray / threshold) * 255;
           gray = gray < 50 ? gray * 0.6 : gray; 
         }
@@ -352,7 +372,6 @@
       }
     }
 
-    // 梯級式遞減 Quality (90 -> 5) 與 DPI 逼近容量限制
     async function getOptimizedJPEG(canvas, maxBytesPerCard) {
       let q = 0.90;
       let scale = 1.0;
@@ -373,10 +392,9 @@
           if (blob.size <= maxBytesPerCard) {
             return blob;
           }
-          q -= 0.05; // 逐步微調
+          q -= 0.05;
         }
 
-        // 若 Quality 已降至最低仍超標，才降 Scale
         scale -= 0.2;
         q = 0.85;
       }
@@ -392,23 +410,20 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        // 預留 50KB 給 PDF 架構
         const targetBytes = data.targetMB * 1024 * 1024 - 50 * 1024;
         const maxBytesPerCard = Math.floor(targetBytes / 2);
 
-        // 梯級壓縮
         const frontBlob = await getOptimizedJPEG(data.front.canvas, maxBytesPerCard);
         const backBlob = await getOptimizedJPEG(data.back.canvas, maxBytesPerCard);
 
         const frontDataUrl = await blobToDataURL(frontBlob);
         const backDataUrl = await blobToDataURL(backBlob);
 
-        // A4 實體置中排版 (1:1 鎖死為 85.6mm x 54.0mm)
         const cardW = 85.6;
         const cardH = 54.0;
-        const xPos = (210 - cardW) / 2; // 置中 = 62.2mm
-        const yPosFront = 65;            // 上方正面
-        const yPosBack = yPosFront + cardH + 20; // 下方反面（間距 20mm）
+        const xPos = (210 - cardW) / 2;
+        const yPosFront = 65;
+        const yPosBack = yPosFront + cardH + 20;
 
         doc.addImage(frontDataUrl, 'JPEG', xPos, yPosFront, cardW, cardH);
         doc.addImage(backDataUrl, 'JPEG', xPos, yPosBack, cardW, cardH);
@@ -416,18 +431,16 @@
         const pdfBlob = doc.output('blob');
         const finalSizeMB = (pdfBlob.size / (1024 * 1024)).toFixed(2);
 
-        // iOS 原生分享/下載面板
         const file = new File([pdfBlob], `ID_Card_A4_1to1_${finalSizeMB}MB.pdf`, { type: 'application/pdf' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
-            files: [file],
-            title: '證件 A4 PDF (1:1)'
+            files: [file]
           });
         } else {
           const downloadUrl = URL.createObjectURL(pdfBlob);
           const a = document.createElement('a');
           a.href = downloadUrl;
-          a.download = `ID_Card_A4_1to1_${finalSizeMB}MB.pdf`;
+          a.download = `ID_Card.pdf`;
           a.click();
           URL.revokeObjectURL(downloadUrl);
         }
