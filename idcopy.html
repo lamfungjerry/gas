@@ -3,66 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>證件 A4 1:1 影印工具</title>
+  <title>證件 A4工具</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
       --bg: #121212;
-      --card-bg: #1e1e1e;
+      --card-bg: #1c1c1e;
       --primary: #007aff;
       --text: #f5f5f7;
       --subtext: #8e8e93;
-      --border: #333333;
+      --border: #2c2c2e;
+      --accent: #30d158;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    html, body {
+      height: 100dvh;
+      overflow: hidden;
       background-color: var(--bg);
       color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
       align-items: center;
-      padding: env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 80px) 12px;
+      padding: calc(env(safe-area-inset-top) + 4px) 14px calc(env(safe-area-inset-bottom) + 8px) 14px;
     }
 
     /* 頂部標題 */
     .app-title {
-      font-size: 19px;
+      font-size: 16px;
       font-weight: 700;
       text-align: center;
-      margin: 8px 0 4px 0;
+      margin: 2px 0;
       cursor: pointer;
       user-select: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
     }
-    .app-title:active {
-      opacity: 0.7;
-    }
+    .app-title:active { opacity: 0.6; }
 
     /* 緊湊控制面板 */
     .panel {
       width: 100%;
-      max-width: 440px;
+      max-width: 420px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-top: 6px;
+      gap: 6px;
     }
 
-    /* 上傳卡片並排 */
+    /* 上傳卡片 */
     .upload-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
     }
     .upload-box {
       background: var(--card-bg);
       border: 1.5px dashed var(--border);
-      border-radius: 12px;
-      height: 120px;
+      border-radius: 10px;
+      height: 68px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -77,7 +78,7 @@
       display: none;
     }
     .upload-box span {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--subtext);
       pointer-events: none;
     }
@@ -88,31 +89,33 @@
     }
     .rot-btn {
       position: absolute;
-      bottom: 6px;
-      right: 6px;
-      background: rgba(0,0,0,0.65);
+      bottom: 3px;
+      right: 3px;
+      background: rgba(0,0,0,0.7);
       border: 1px solid #555;
       color: #fff;
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 6px;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 4px;
       display: none;
     }
 
-    /* 分段按鈕群組（一行過） */
+    /* 控制行通用設定 */
     .control-row {
       display: flex;
       align-items: center;
       background: var(--card-bg);
-      border-radius: 10px;
-      padding: 3px;
+      border-radius: 8px;
+      padding: 2px 6px;
       border: 1px solid var(--border);
+      height: 32px;
+      gap: 6px;
     }
     .control-label {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--subtext);
-      padding: 0 10px;
       white-space: nowrap;
+      min-width: 28px;
     }
     .btn-group {
       display: flex;
@@ -124,41 +127,69 @@
       background: transparent;
       border: none;
       color: var(--text);
-      padding: 6px 0;
-      font-size: 13px;
+      padding: 4px 0;
+      font-size: 12px;
       font-weight: 500;
-      border-radius: 7px;
+      border-radius: 6px;
     }
     .btn-group button.active {
       background: var(--primary);
       color: #fff;
     }
 
-    /* A4 預覽區 */
+    /* Quality 步進控制器 */
+    .step-btn {
+      background: #2c2c2e;
+      border: none;
+      color: var(--text);
+      width: 26px;
+      height: 24px;
+      border-radius: 5px;
+      font-size: 14px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-btn:active { background: #3a3a3c; }
+    .q-slider {
+      flex: 1;
+      accent-color: var(--primary);
+      height: 4px;
+    }
+    .quality-display {
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 36px;
+      text-align: right;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 微型 A4 示意預覽區 */
     .preview-container {
-      width: 100%;
-      max-width: 320px;
+      height: 110px;
       aspect-ratio: 210 / 297;
       background: #ffffff;
-      margin: 12px auto;
-      border-radius: 4px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      margin: 2px auto;
+      border-radius: 3px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      padding: 16px;
+      gap: 5px;
+      padding: 6px;
     }
     .card-preview {
-      width: 80%;
+      width: 82%;
       aspect-ratio: 85.6 / 54;
-      border: 1px dashed #d1d1d6;
+      border: 1px dashed #c7c7cc;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      background: #fbfbfd;
+      background: #f2f2f7;
     }
     .card-preview canvas {
       width: 100%;
@@ -166,63 +197,53 @@
       object-fit: cover;
     }
 
-    /* 底部懸浮按鈕 */
+    /* 底部按鈕 */
     .action-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(18, 18, 18, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px) 16px;
-      display: flex;
-      justify-content: center;
-      border-top: 1px solid var(--border);
+      width: 100%;
+      max-width: 420px;
+      padding-top: 4px;
     }
     .export-btn {
       width: 100%;
-      max-width: 440px;
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 14px;
-      font-size: 16px;
+      padding: 12px;
+      font-size: 15px;
       font-weight: 600;
-      border-radius: 12px;
+      border-radius: 10px;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
-    .export-btn:disabled {
-      opacity: 0.4;
-    }
+    .export-btn:disabled { opacity: 0.35; }
+    .export-btn.success { background: var(--accent); color: #000; }
   </style>
 </head>
 <body>
 
-  <!-- 頂部標題與返回支援 -->
+  <!-- 頂部標題與返回 -->
   <h1 class="app-title" onclick="safeBack()">證件 A4 1:1 影印工具</h1>
 
   <div class="panel">
     <!-- 正反面圖片上傳 -->
     <div class="upload-row">
       <div class="upload-box" id="box-front">
-        <span>+ 正面相片</span>
+        <span>+ 正面</span>
         <img id="img-front" />
         <button class="rot-btn" id="rot-front" onclick="rotateCard('front', event)">↻ 90°</button>
         <input type="file" accept="image/*" onchange="handleFile(this, 'front')">
       </div>
       <div class="upload-box" id="box-back">
-        <span>+ 反面相片</span>
+        <span>+ 反面</span>
         <img id="img-back" />
         <button class="rot-btn" id="rot-back" onclick="rotateCard('back', event)">↻ 90°</button>
         <input type="file" accept="image/*" onchange="handleFile(this, 'back')">
       </div>
     </div>
 
-    <!-- 影印深淺切換 -->
+    <!-- 影印深淺 -->
     <div class="control-row">
       <span class="control-label">深淺</span>
       <div class="btn-group" id="tone-group">
@@ -232,25 +253,34 @@
       </div>
     </div>
 
-    <!-- 上限容量切換 -->
+    <!-- 上限容量 -->
     <div class="control-row">
       <span class="control-label">容量</span>
       <div class="btn-group" id="mb-group">
-        <button onclick="setTargetMB(0.5, this)">0.5MB</button>
-        <button onclick="setTargetMB(1.0, this)">1MB</button>
-        <button class="active" onclick="setTargetMB(2.0, this)">2MB</button>
-        <button onclick="setTargetMB(5.0, this)">5MB</button>
+        <button onclick="setTargetMB(0.5, this)">0.5M</button>
+        <button onclick="setTargetMB(1.0, this)">1M</button>
+        <button class="active" onclick="setTargetMB(2.0, this)">2M</button>
+        <button onclick="setTargetMB(5.0, this)">5M</button>
       </div>
     </div>
 
-    <!-- A4 模擬預覽 -->
+    <!-- Quality 步進控制器 (75% - 100%) -->
+    <div class="control-row">
+      <span class="control-label">品質</span>
+      <button class="step-btn" onclick="stepQuality(-1)">−</button>
+      <input type="range" class="q-slider" id="q-range" min="75" max="100" value="90" oninput="updateQuality(this.value)">
+      <button class="step-btn" onclick="stepQuality(1)">+</button>
+      <span class="quality-display" id="q-val">90%</span>
+    </div>
+
+    <!-- 微型 A4 示意預覽 -->
     <div class="preview-container">
       <div class="card-preview"><canvas id="canvas-front"></canvas></div>
       <div class="card-preview"><canvas id="canvas-back"></canvas></div>
     </div>
   </div>
 
-  <!-- 底部固定匯出按鈕 -->
+  <!-- 底部匯出按鈕 -->
   <div class="action-bar">
     <button class="export-btn" id="export-btn" onclick="exportPDF()" disabled>匯出 A4 PDF (1:1)</button>
   </div>
@@ -266,8 +296,36 @@
       front: { img: null, rot: 0, canvas: document.getElementById('canvas-front') },
       back: { img: null, rot: 0, canvas: document.getElementById('canvas-back') },
       whiteThreshold: 190,
-      targetMB: 2.0
+      targetMB: 2.0,
+      quality: 90
     };
+
+    function stepQuality(delta) {
+      let q = data.quality + delta;
+      if (q < 75) q = 75;
+      if (q > 100) q = 100;
+      updateQuality(q);
+    }
+
+    function updateQuality(val) {
+      data.quality = parseInt(val, 10);
+      document.getElementById('q-range').value = data.quality;
+      document.getElementById('q-val').innerText = `${data.quality}%`;
+    }
+
+    function setTone(threshold, btn) {
+      data.whiteThreshold = threshold;
+      document.querySelectorAll('#tone-group button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      processAndRender('front');
+      processAndRender('back');
+    }
+
+    function setTargetMB(mb, btn) {
+      data.targetMB = mb;
+      document.querySelectorAll('#mb-group button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
 
     function handleFile(input, side) {
       if (!input.files || !input.files[0]) return;
@@ -312,20 +370,6 @@
       processAndRender(side);
     }
 
-    function setTone(threshold, btn) {
-      data.whiteThreshold = threshold;
-      document.querySelectorAll('#tone-group button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      processAndRender('front');
-      processAndRender('back');
-    }
-
-    function setTargetMB(mb, btn) {
-      data.targetMB = mb;
-      document.querySelectorAll('#mb-group button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    }
-
     function processAndRender(side) {
       const card = data[side];
       if (!card.img) return;
@@ -351,14 +395,12 @@
 
       for (let i = 0; i < d.length; i += 4) {
         let gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-
         if (gray > threshold) {
           gray = 255;
         } else {
           gray = (gray / threshold) * 255;
           gray = gray < 50 ? gray * 0.6 : gray; 
         }
-
         d[i] = gray;
         d[i+1] = gray;
         d[i+2] = gray;
@@ -372,8 +414,9 @@
       }
     }
 
-    async function getOptimizedJPEG(canvas, maxBytesPerCard) {
-      let q = 0.90;
+    // 梯度壓縮算法：以用戶設定的 Quality 為起點，若超標則每次減 1% (0.01)
+    async function getOptimizedJPEG(canvas, maxBytesPerCard, startQuality) {
+      let q = startQuality / 100;
       let scale = 1.0;
       let blob = null;
 
@@ -390,15 +433,15 @@
         while (q >= 0.05) {
           blob = await new Promise(res => workCanvas.toBlob(res, 'image/jpeg', q));
           if (blob.size <= maxBytesPerCard) {
-            return blob;
+            return { blob, finalQ: Math.round(q * 100) };
           }
-          q -= 0.05;
+          q = parseFloat((q - 0.01).toFixed(2)); // 精確遞減 1%
         }
 
         scale -= 0.2;
         q = 0.85;
       }
-      return blob;
+      return { blob, finalQ: Math.round(q * 100) };
     }
 
     async function exportPDF() {
@@ -410,14 +453,16 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        const targetBytes = data.targetMB * 1024 * 1024 - 50 * 1024;
+        const targetBytes = data.targetMB * 1024 * 1024 - 40 * 1024;
         const maxBytesPerCard = Math.floor(targetBytes / 2);
 
-        const frontBlob = await getOptimizedJPEG(data.front.canvas, maxBytesPerCard);
-        const backBlob = await getOptimizedJPEG(data.back.canvas, maxBytesPerCard);
+        // 執行梯級壓縮並獲取最終實際 Quality
+        const frontRes = await getOptimizedJPEG(data.front.canvas, maxBytesPerCard, data.quality);
+        const backRes = await getOptimizedJPEG(data.back.canvas, maxBytesPerCard, data.quality);
+        const actualQuality = Math.min(frontRes.finalQ, backRes.finalQ);
 
-        const frontDataUrl = await blobToDataURL(frontBlob);
-        const backDataUrl = await blobToDataURL(backBlob);
+        const frontDataUrl = await blobToDataURL(frontRes.blob);
+        const backDataUrl = await blobToDataURL(backRes.blob);
 
         const cardW = 85.6;
         const cardH = 54.0;
@@ -431,11 +476,12 @@
         const pdfBlob = doc.output('blob');
         const finalSizeMB = (pdfBlob.size / (1024 * 1024)).toFixed(2);
 
-        const file = new File([pdfBlob], `ID_Card_A4_1to1_${finalSizeMB}MB.pdf`, { type: 'application/pdf' });
+        // 匯出結果提示與檔案命名
+        const fileName = `ID_Card_A4_1to1_${finalSizeMB}MB_Q${actualQuality}%.pdf`;
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file]
-          });
+          await navigator.share({ files: [file] });
         } else {
           const downloadUrl = URL.createObjectURL(pdfBlob);
           const a = document.createElement('a');
@@ -444,9 +490,18 @@
           a.click();
           URL.revokeObjectURL(downloadUrl);
         }
+
+        // 成功反饋，顯示實際大小與最終採用的 Quality
+        btn.classList.add('success');
+        btn.innerText = `✓ ${finalSizeMB}MB (實測 Q: ${actualQuality}%)`;
+        setTimeout(() => {
+          btn.classList.remove('success');
+          btn.innerText = "匯出 A4 PDF (1:1)";
+          btn.disabled = false;
+        }, 4000);
+
       } catch (err) {
         alert("匯出失敗: " + err.message);
-      } finally {
         btn.disabled = false;
         btn.innerText = "匯出 A4 PDF (1:1)";
       }
