@@ -7,16 +7,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
-      --bg: #121212;
+      --bg: #000000;
       --card-bg: #1c1c1e;
+      --card-subtle: #2c2c2e;
       --primary: #007aff;
       --success: #30d158;
-      --text: #f5f5f7;
+      --text: #ffffff;
       --subtext: #8e8e93;
-      --border: #2c2c2e;
+      --border: #38383a;
     }
     
-    /* 停用雙擊縮放與反彈滾動 */
+    /* 禁用雙擊縮放及反彈滾動 */
     * { 
       box-sizing: border-box; 
       -webkit-tap-highlight-color: transparent; 
@@ -36,9 +37,11 @@
     body {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      padding: calc(env(safe-area-inset-top) + 6px) 14px calc(env(safe-area-inset-bottom) + 10px) 14px;
+      height: 100dvh;
+      max-width: 440px;
+      margin: 0 auto;
+      padding: calc(env(safe-area-inset-top) + 6px) 16px calc(env(safe-area-inset-bottom) + 8px) 16px;
+      gap: 10px;
     }
 
     /* 頂部標題 */
@@ -49,86 +52,76 @@
       cursor: pointer;
       user-select: none;
       padding: 2px 0;
+      flex-shrink: 0;
     }
     .app-title:active { opacity: 0.6; }
 
-    /* 控制面板 */
-    .panel {
-      width: 100%;
-      max-width: 420px;
+    /* 上方控制面板 */
+    .top-section {
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 8px;
+      flex-shrink: 0;
     }
 
-    /* 上傳卡片區 */
+    /* 上傳卡片並排 */
     .upload-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 10px;
     }
     .upload-box {
       background: var(--card-bg);
       border: 1.5px dashed var(--border);
-      border-radius: 10px;
-      height: 82px;
+      border-radius: 12px;
+      height: 74px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       position: relative;
       overflow: hidden;
+      cursor: pointer;
     }
     .upload-box img {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: none;
-      z-index: 2;
     }
     .upload-box span {
       font-size: 13px;
+      font-weight: 500;
       color: var(--subtext);
       pointer-events: none;
-      z-index: 2;
     }
-    /* 透明 input 設為 z-index: 1 */
-    .upload-box input[type="file"] {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      opacity: 0;
-      z-index: 1;
-      cursor: pointer;
-    }
-    /* 旋轉按鈕提升至 z-index: 10，防止被 input 攔截 */
     .rot-btn {
       position: absolute;
       bottom: 5px;
       right: 5px;
-      z-index: 10;
-      background: rgba(40, 40, 40, 0.85);
-      border: 1px solid #555;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid #666;
       color: #fff;
       font-size: 11px;
       padding: 3px 8px;
-      border-radius: 5px;
+      border-radius: 6px;
       display: none;
       cursor: pointer;
     }
 
-    /* 控制行通用設定 */
+    /* 設定列 */
     .control-row {
       display: flex;
       align-items: center;
       background: var(--card-bg);
-      border-radius: 9px;
-      padding: 2px 8px;
+      border-radius: 10px;
+      padding: 3px 8px;
       border: 1px solid var(--border);
-      height: 33px;
-      gap: 6px;
+      height: 34px;
+      gap: 8px;
     }
     .control-label {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--subtext);
       white-space: nowrap;
       min-width: 28px;
@@ -136,26 +129,26 @@
     .btn-group {
       display: flex;
       flex: 1;
-      gap: 2px;
+      gap: 3px;
     }
     .btn-group button {
       flex: 1;
       background: transparent;
       border: none;
       color: var(--text);
-      padding: 4px 0;
+      padding: 5px 0;
       font-size: 12px;
       font-weight: 500;
-      border-radius: 6px;
+      border-radius: 7px;
     }
     .btn-group button.active {
       background: var(--primary);
       color: #fff;
     }
 
-    /* Quality 步進控制 */
+    /* Quality 步進控制器 */
     .step-btn {
-      background: #2c2c2e;
+      background: var(--card-subtle);
       border: none;
       color: var(--text);
       width: 26px;
@@ -189,30 +182,39 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* 微型 A4 示意預覽區 */
+    /* 中間 A4 預覽區：自動填滿剩餘高度，消除空隙 */
+    .preview-wrapper {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 0;
+    }
     .preview-container {
-      height: 120px;
+      height: 100%;
+      max-height: 100%;
       aspect-ratio: 210 / 297;
       background: #ffffff;
-      margin: 1px auto;
-      border-radius: 3px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      padding: 6px;
+      gap: 8px;
+      padding: 10px;
     }
     .card-preview {
       width: 82%;
       aspect-ratio: 85.6 / 54;
-      border: 1px dashed #c7c7cc;
+      border: 1px dashed #b0b0b8;
+      border-radius: 3px;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      background: #f2f2f7;
+      background: #f4f4f7;
     }
     .card-preview canvas {
       width: 100%;
@@ -220,24 +222,23 @@
       object-fit: cover;
     }
 
-    /* 匯出結果提示欄 */
+    /* 底部操作區 */
+    .bottom-section {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
     .result-info {
       display: none;
-      background: rgba(48, 209, 88, 0.12);
+      background: rgba(48, 209, 88, 0.15);
       border: 1px solid var(--success);
       color: var(--success);
       font-size: 13px;
       font-weight: 600;
-      border-radius: 8px;
-      padding: 6px 10px;
+      border-radius: 9px;
+      padding: 7px 10px;
       text-align: center;
-      margin-bottom: 6px;
-    }
-
-    /* 底部按鈕區 */
-    .action-bar {
-      width: 100%;
-      max-width: 420px;
     }
     .action-btn {
       width: 100%;
@@ -245,9 +246,9 @@
       color: #fff;
       border: none;
       padding: 13px;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 600;
-      border-radius: 11px;
+      border-radius: 12px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -266,24 +267,25 @@
   <!-- 頂部標題 -->
   <h1 class="app-title" onclick="safeBack()">證件 A4 1:1 影印工具</h1>
 
-  <div class="panel">
-    <!-- 正反面圖片上傳 -->
+  <!-- 控制面板 -->
+  <div class="top-section">
+    <!-- 上傳卡片並排（完全隔離 input，杜絕旋轉誤開） -->
     <div class="upload-row">
-      <div class="upload-box" id="box-front">
+      <div class="upload-box" id="box-front" onclick="openUpload('front', event)">
         <span>+ 正面相片</span>
         <img id="img-front" />
-        <input type="file" id="file-front" accept="image/*" onchange="handleFile(this, 'front')">
         <button type="button" class="rot-btn" id="rot-front" onclick="rotateCard('front', event)">↻ 90°</button>
+        <input type="file" id="file-front" accept="image/*" style="display:none;" onchange="handleFile(this, 'front')">
       </div>
-      <div class="upload-box" id="box-back">
+      <div class="upload-box" id="box-back" onclick="openUpload('back', event)">
         <span>+ 反面相片</span>
         <img id="img-back" />
-        <input type="file" id="file-back" accept="image/*" onchange="handleFile(this, 'back')">
         <button type="button" class="rot-btn" id="rot-back" onclick="rotateCard('back', event)">↻ 90°</button>
+        <input type="file" id="file-back" accept="image/*" style="display:none;" onchange="handleFile(this, 'back')">
       </div>
     </div>
 
-    <!-- 影印深淺切換 -->
+    <!-- 影印深淺 -->
     <div class="control-row">
       <span class="control-label">深淺</span>
       <div class="btn-group" id="tone-group">
@@ -293,7 +295,7 @@
       </div>
     </div>
 
-    <!-- 容量上限切換 -->
+    <!-- 容量上限 -->
     <div class="control-row">
       <span class="control-label">容量</span>
       <div class="btn-group" id="mb-group">
@@ -304,7 +306,7 @@
       </div>
     </div>
 
-    <!-- Quality 步進控制器 -->
+    <!-- Quality 步進 -->
     <div class="control-row">
       <span class="control-label">品質</span>
       <button class="step-btn" onclick="stepQuality(-1)">−</button>
@@ -313,22 +315,24 @@
       <span class="quality-display" id="q-val">90%</span>
       <span class="est-badge" id="est-display">預計: --</span>
     </div>
+  </div>
 
-    <!-- 微型 A4 示意預覽 -->
+  <!-- 中間預覽區（自適應等比例放大） -->
+  <div class="preview-wrapper">
     <div class="preview-container">
       <div class="card-preview"><canvas id="canvas-front"></canvas></div>
       <div class="card-preview"><canvas id="canvas-back"></canvas></div>
     </div>
   </div>
 
-  <!-- 底部按鈕區與結果提示 -->
-  <div class="action-bar">
+  <!-- 底部按鈕與狀態回報 -->
+  <div class="bottom-section">
     <div class="result-info" id="result-info"></div>
     <button class="action-btn" id="main-btn" onclick="handleMainAction()" disabled>產生 A4 PDF</button>
   </div>
 
   <script>
-    // 禁用 iOS 雙擊縮放
+    // 徹底禁用 iOS 雙擊縮放
     let lastTouchEnd = 0;
     document.addEventListener('touchend', function (e) {
       const now = Date.now();
@@ -352,7 +356,6 @@
       quality: 90
     };
 
-    // 儲存生成後的 PDF 快取
     let generatedResult = null;
 
     function resetGeneratedState() {
@@ -395,7 +398,6 @@
       calculateEstimate();
     }
 
-    // 即時計算預估容量
     function calculateEstimate() {
       const estBadge = document.getElementById('est-display');
       if (!data.front.img && !data.back.img) {
@@ -406,7 +408,7 @@
       let totalPx = 0;
       if (data.front.canvas.width) totalPx += data.front.canvas.width * data.front.canvas.height;
       if (data.back.canvas.width) totalPx += data.back.canvas.width * data.back.canvas.height;
-      if (!data.front.img || !data.back.img) totalPx *= 2; // 單張先按雙倍估計
+      if (!data.front.img || !data.back.img) totalPx *= 2;
 
       const qRatio = data.quality / 100;
       const bpp = 0.05 + Math.pow(qRatio, 3.2) * 0.28;
@@ -432,6 +434,12 @@
       } else {
         btn.innerText = "產生 A4 PDF";
       }
+    }
+
+    // 點擊上傳卡片（避開旋轉按鈕）
+    function openUpload(side, e) {
+      if (e.target.closest('.rot-btn')) return;
+      document.getElementById(`file-${side}`).click();
     }
 
     function handleFile(input, side) {
@@ -473,11 +481,10 @@
       reader.readAsDataURL(input.files[0]);
     }
 
-    // 解決 90° 點擊被 input 攔截的問題
+    // 獨立旋轉處理，不再誤開相簿
     function rotateCard(side, e) {
       if (e) {
         e.stopPropagation();
-        e.preventDefault();
       }
       data[side].rot = (data[side].rot + 90) % 360;
       processAndRender(side);
@@ -558,7 +565,6 @@
       return { blob, finalQ: Math.round(q * 100) };
     }
 
-    // 兩段式按鈕處理：未生成則先產生並顯示數據；已生成則觸發下載
     async function handleMainAction() {
       if (generatedResult) {
         downloadOrSharePDF();
@@ -567,7 +573,7 @@
 
       const btn = document.getElementById('main-btn');
       btn.disabled = true;
-      btn.innerText = "正在計算並壓縮...";
+      btn.innerText = "正在處理並壓縮...";
 
       try {
         const { jsPDF } = window.jspdf;
@@ -596,7 +602,6 @@
         const finalSizeMB = (pdfBlob.size / (1024 * 1024)).toFixed(2);
         const fileName = `ID_Card_A4_1to1_${finalSizeMB}MB_Q${actualQuality}%.pdf`;
 
-        // 儲存結果快取
         generatedResult = {
           blob: pdfBlob,
           sizeMB: finalSizeMB,
@@ -604,12 +609,10 @@
           fileName: fileName
         };
 
-        // 顯示生成結果詳情
         const infoEl = document.getElementById('result-info');
         infoEl.innerHTML = `✓ 已生成：<b>${finalSizeMB} MB</b>｜實際品質：<b>${actualQuality}%</b>`;
         infoEl.style.display = 'block';
 
-        // 轉換按鈕狀態
         btn.classList.add('download-ready');
         btn.innerText = "立即下載 / 分享 PDF";
         btn.disabled = false;
