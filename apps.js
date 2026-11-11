@@ -37,5 +37,10 @@ const apps = [
         title: "PDF壓縮",
         url: "https://lamfungjerry.github.io/gas/pdfcompress.html",
         icon: "icons/pdfcompress.png"
+      },
+      {
+        title: "ID Copy",
+        url: "https://lamfungjerry.github.io/gas/idcopy.html",
+        icon: "icons/idcopy.png"
       }
 ];
