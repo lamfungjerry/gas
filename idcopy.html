@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>證件 A4 1:1 影印工具</title>
+  <title>證件影印工具</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
@@ -174,13 +174,6 @@
       color: var(--text);
       font-variant-numeric: tabular-nums;
     }
-    .est-badge {
-      font-size: 11px;
-      color: #ff9f0a;
-      white-space: nowrap;
-      margin-left: 2px;
-      font-variant-numeric: tabular-nums;
-    }
 
     /* 中間 A4 預覽區：自動填滿剩餘高度，消除空隙 */
     .preview-wrapper {
@@ -265,7 +258,7 @@
 <body>
 
   <!-- 頂部標題 -->
-  <h1 class="app-title" onclick="safeBack()">證件 A4 1:1 影印工具</h1>
+  <h1 class="app-title" onclick="safeBack()">證件影印工具</h1>
 
   <!-- 控制面板 -->
   <div class="top-section">
@@ -425,7 +418,7 @@
         return;
       }
       if (data.front.img && data.back.img) {
-        const est = estMB || document.getElementById('est-display').innerText.replace('預計: ~', '');
+        const est = estMB;
         btn.innerText = `產生 A4 PDF (預計 ~${est})`;
       } else {
         btn.innerText = "產生 A4 PDF";
