@@ -313,7 +313,6 @@
       <input type="range" class="q-slider" id="q-range" min="75" max="100" value="90" oninput="updateQuality(this.value)">
       <button class="step-btn" onclick="stepQuality(1)">+</button>
       <span class="quality-display" id="q-val">90%</span>
-      <span class="est-badge" id="est-display">預計: --</span>
     </div>
   </div>
 
@@ -399,9 +398,7 @@
     }
 
     function calculateEstimate() {
-      const estBadge = document.getElementById('est-display');
       if (!data.front.img && !data.back.img) {
-        estBadge.innerText = '預計: --';
         return;
       }
 
@@ -418,7 +415,6 @@
       if (estBytes > maxBytes) estBytes = maxBytes;
 
       const estMB = (estBytes / (1024 * 1024)).toFixed(2);
-      estBadge.innerText = `預計: ~${estMB}M`;
       updateButtonText(estMB);
     }
 
