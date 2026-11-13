@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>小朋友英文默生字助手</title>
+  <!-- 引入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Google Fonts (Inter + Noto Sans TC) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* 基礎字體與 iOS 觸控體驗優化 */
+    :root {
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      padding-top: var(--safe-top);
+      padding-bottom: calc(96px + var(--safe-bottom));
+    }
+
+    /* 消除 iOS Safari 點擊延遲 (300ms) 與雙擊放大 */
+    button,
+    a,
+    [role="button"],
+    textarea,
+    input {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 強制 textarea 至少 16px，防止 iPhone Safari 點擊輸入框時自動放大畫面 */
+    textarea.ios-no-zoom {
+      font-size: 16px !important;
+      line-height: 1.6;
+    }
+
+    /* 朗讀中聲波跳動動畫 */
+    @keyframes soundWave {
+      0%, 100% { transform: scaleY(0.35); }
+      50% { transform: scaleY(1); }
+    }
+
+    .wave-bar {
+      animation: soundWave 0.75s ease-in-out infinite;
+      transform-origin: bottom;
+    }
+    .wave-bar:nth-child(2) { animation-delay: 0.15s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.45s; }
+
+    /* 朗讀中卡片高亮脈衝外框 */
+    .card-speaking {
+      border-color: #4f46e5 !important;
+      background-color: #eef2ff !important;
+      box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.25), 0 0 0 3px rgba(99, 102, 241, 0.25);
+      transform: translateY(-1px);
+    }
+
+    /* 祝賀畫面彈跳動畫 */
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-pop-in {
+      animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- 頂部 iPhone 靜音鍵使用提示橫幅 -->
+  <div class="bg-amber-50 border-b border-amber-200/90 px-4 py-2.5 text-amber-950">
+    <div class="max-w-xl mx-auto flex items-start gap-2 text-xs sm:text-sm font-medium leading-snug">
+      <span class="shrink-0 text-base leading-none mt-0.5">💡</span>
+      <p>
+        <strong>iPhone 使用提示：</strong>請確保手機側邊靜音鍵已關閉（非靜音模式），否則網頁發音會沒有聲音。
+      </p>
+    </div>
+  </div>
+
+  <!-- 主容器 -->
+  <main class="max-w-xl mx-auto px-4 pt-4">
+
+    <!-- 頁面標題區 -->
+    <header class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white flex items-center justify-center shadow-md shadow-indigo-200 text-xl">
+          ✍️
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+            小朋友英文默生字助手
+          </h1>
+          <p class="text-xs text-slate-500 font-medium">
+            逐字發音 ・ 紀錄錯字 ・ 一鍵補默
+          </p>
+        </div>
+      </div>
+
+      <!-- 語音引擎狀態小徽章 -->
+      <div id="voice-status-badge" class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-200/70 text-slate-600">
+        語音準備中…
+      </div>
+    </header>
+
+    <!-- =====================================================================
+         畫面一：輸入生字區 (Setup / Input View)
+    ====================================================================== -->
+    <section id="setup-view" class="space-y-4">
+      <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <!-- 標題與快捷操作按鈕 -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <label for="words-input" class="text-base font-bold text-slate-800">
+              📝 輸入或貼上生字
+            </label>
+            <span id="input-word-count" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+              0 個生字
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              id="btn-sample"
+              class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 transition"
+              title="填入示範生字"
+            >
+              範例
+            </button>
+            <button
+              type="button"
+              id="btn-paste"
+              class="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-700 border border-indigo-200/70 transition flex items-center gap-1"
+            >
+              <span>📋</span> 貼上
+            </button>
+            <button
+              type="button"
+              id="btn-clear"
+              class="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 border border-rose-200/70 transition flex items-center gap-1"
+            >
+              <span>🗑️</span> 清空
+            </button>
+          </div>
+        </div>
+
+        <!-- 大尺寸生字輸入框 (font-size: 16px 防止 iPhone 自動縮放) -->
+        <div class="relative">
+          <textarea
+            id="words-input"
+            rows="7"
+            autocapitalize="off"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            placeholder="請在此貼上英文生字，一行一個生字：&#10;apple&#10;banana&#10;elephant&#10;beautiful&#10;tomorrow"
+            class="ios-no-zoom w-full rounded-2xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50/60 focus:bg-white p-3.5 text-slate-900 placeholder:text-slate-400 outline-none transition resize-y"
+          ></textarea>
+          <p class="mt-1.5 text-xs text-slate-500 flex items-center justify-between">
+            <span>支援一行一個生字或片語，會自動過濾空白行及前後空格。</span>
+          </p>
+        </div>
+
+        <!-- 語音設定區：口音 & 預設語速 -->
+        <div class="pt-2 border-t border-slate-100 space-y-3.5">
+          <!-- 口音選擇 -->
+          <div>
+            <span class="block text-xs font-bold text-slate-600 mb-2">
+              🗣️ 語音口音選擇
+            </span>
+            <div class="grid grid-cols-2 gap-2.5" role="group" aria-label="語音口音">
+              <button
+                type="button"
+                data-accent="en-US"
+                class="accent-btn py-3 px-3 rounded-2xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98]"
+              >
+                <span class="text-base">🇺🇸</span>
+                <span>美式 (en-US)</span>
+              </button>
+              <button
+                type="button"
+                data-accent="en-GB"
+                class="accent-btn py-3 px-3 rounded-2xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98]"
+              >
+                <span class="text-base">🇬🇧</span>
+                <span>英式 (en-GB)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 預設語速選擇 -->
+          <div>
+            <span class="block text-xs font-bold text-slate-600 mb-2">
+              ⏱️ 預設發音語速
+            </span>
+            <div class="grid grid-cols-3 gap-2" role="group" aria-label="預設語速">
+              <button
+                type="button"
+                data-rate="0.65"
+                class="rate-btn py-3 px-2 rounded-2xl border-2 font-bold text-xs sm:text-sm transition active:scale-[0.98]"
+              >
+                慢速 0.65x
+              </button>
+              <button
+                type="button"
+                data-rate="0.85"
+                class="rate-btn py-3 px-2 rounded-2xl border-2 font-bold text-xs sm:text-sm transition active:scale-[0.98]"
+              >
+                適中 0.85x
+              </button>
+              <button
+                type="button"
+                data-rate="1.0"
+                class="rate-btn py-3 px-2 rounded-2xl border-2 font-bold text-xs sm:text-sm transition active:scale-[0.98]"
+              >
+                正常 1.0x
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 開始默書主按鈕 -->
+      <button
+        type="button"
+        id="btn-start"
+        class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 active:scale-[0.98] text-white font-extrabold text-lg shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2.5 transition"
+      >
+        <span>🚀</span>
+        <span>開始默書</span>
+      </button>
+    </section>
+
+    <!-- =====================================================================
+         畫面二：默書互動卡片區 (Dictation Cards View)
+    ====================================================================== -->
+    <section id="dictation-view" class="hidden space-y-4">
+
+      <!-- 頂部狀態與篩選控制列 -->
+      <div class="sticky top-2 z-20 bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-4 shadow-md border border-slate-200/90 space-y-3">
+
+        <!-- 第一行：輪次徽章 + 功能按鈕（修改字表 / 複製錯字） -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div id="round-badge-container" class="flex items-center gap-1.5">
+            <span id="round-badge" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800">
+              📖 正式默書
+            </span>
+            <span id="voice-mini-info" class="text-[11px] font-semibold text-slate-400">
+              🇺🇸 0.85x
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              id="btn-toggle-all-mask"
+              class="px-2.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition"
+              title="全部遮蓋或顯示生字"
+            >
+              👁️ 全部遮蓋
+            </button>
+            <button
+              type="button"
+              id="btn-copy-wrong"
+              class="px-2.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200/80 transition"
+            >
+              📋 複製錯字
+            </button>
+            <button
+              type="button"
+              id="btn-edit-list"
+              class="px-2.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 transition"
+            >
+              ✏️ 修改字表
+            </button>
+          </div>
+        </div>
+
+        <!-- 第二行：統計數據列 -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-slate-50 rounded-2xl py-2 px-2 border border-slate-200/60">
+            <div class="text-[11px] font-semibold text-slate-500">總生字數</div>
+            <div id="stat-total" class="text-base sm:text-lg font-extrabold text-slate-800">0</div>
+          </div>
+          <div class="bg-emerald-50/80 rounded-2xl py-2 px-2 border border-emerald-200/70">
+            <div class="text-[11px] font-semibold text-emerald-700">✅ 已答啱</div>
+            <div id="stat-correct" class="text-base sm:text-lg font-extrabold text-emerald-700">0</div>
+          </div>
+          <div class="bg-rose-50/80 rounded-2xl py-2 px-2 border border-rose-200/70">
+            <div class="text-[11px] font-semibold text-rose-700">❌ 串錯</div>
+            <div id="stat-wrong" class="text-base sm:text-lg font-extrabold text-rose-700">0</div>
+          </div>
+        </div>
+
+        <!-- 第三行：篩選標籤（全部生字 / 只看錯字） -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+          <button
+            type="button"
+            id="tab-all"
+            class="py-2 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition"
+          >
+            全部生字 (0)
+          </button>
+          <button
+            type="button"
+            id="tab-wrong"
+            class="py-2 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition"
+          >
+            只看錯字 (0)
+          </button>
+        </div>
+      </div>
+
+      <!-- 全部生字過關祝賀畫面 -->
+      <div id="celebration-banner" class="hidden animate-pop-in bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 rounded-3xl p-6 text-white text-center shadow-xl shadow-emerald-500/20 space-y-4">
+        <div class="text-5xl">🎉</div>
+        <div class="space-y-1">
+          <h2 class="text-2xl font-black tracking-tight">
+            🎉 全部生字過關！
+          </h2>
+          <p id="celebration-subtitle" class="text-sm text-emerald-50 font-medium">
+            太棒了！所有生字已經全部默啱！
+          </p>
+        </div>
+        <div class="pt-1 flex flex-col sm:flex-row gap-2.5 justify-center">
+          <button
+            type="button"
+            id="btn-restart-all"
+            class="py-3 px-5 rounded-2xl bg-white text-emerald-700 font-extrabold text-sm shadow-md active:scale-95 transition"
+          >
+            🔁 重新默寫全部生字
+          </button>
+          <button
+            type="button"
+            id="btn-new-list"
+            class="py-3 px-5 rounded-2xl bg-emerald-700/40 hover:bg-emerald-700/60 text-white border border-white/30 font-extrabold text-sm active:scale-95 transition"
+          >
+            ✏️ 輸入新字表
+          </button>
+        </div>
+      </div>
+
+      <!-- 篩選空狀態提示（例如點選「只看錯字」但暫無錯字） -->
+      <div id="empty-filter-state" class="hidden bg-white rounded-3xl p-8 text-center border border-slate-200/80 space-y-2">
+        <div class="text-3xl">✨</div>
+        <p class="text-base font-bold text-slate-700">目前沒有串錯的生字！</p>
+        <p class="text-xs text-slate-500">繼續保持，或切換回「全部生字」檢視所有卡片。</p>
+      </div>
+
+      <!-- 生字卡片列表容器 -->
+      <div id="cards-container" class="space-y-3.5"></div>
+
+    </section>
+  </main>
+
+  <!-- 底部浮動補默按鈕列（當有串錯生字時顯示） -->
+  <div
+    id="bottom-retest-bar"
+    class="hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 pt-3 shadow-[0_-8px_25px_-5px_rgba(0,0,0,0.08)]"
+    style="padding-bottom: calc(12px + var(--safe-bottom));"
+  >
+    <div class="max-w-xl mx-auto">
+      <button
+        type="button"
+        id="btn-retest-wrong"
+        class="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-700 hover:to-orange-600 active:scale-[0.98] text-white font-extrabold text-base sm:text-lg shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 transition"
+      >
+        <span>🔄</span>
+        <span id="btn-retest-label">補默錯字 (0 個)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 自訂輕量級 Toast 提示框（取代系統 alert） -->
+  <div
+    id="toast-container"
+    aria-live="polite"
+    class="fixed top-16 inset-x-0 z-50 pointer-events-none flex justify-center px-4"
+  >
+    <div
+      id="toast-box"
+      class="opacity-0 -translate-y-2 transition-all duration-200 bg-slate-900/95 text-white text-sm font-bold px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 max-w-md text-center"
+    >
+      <span id="toast-text">提示訊息</span>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * 小朋友英文默生字助手 - 核心邏輯與 iOS Safari 語音合成優化模組
+     * =========================================================================
+     */
+
+    // 全域變數保存當前 SpeechSynthesisUtterance 實例，防止 iOS WebKit 垃圾回收機制中途截斷發音
+    window._activeUtterance = null;
+
+    // 應用程式狀態
+    const state = {
+      masterWords: [],        // 原始完整生字陣列 (string[])
+      cards: [],              // 當前默書輪次卡片陣列: { id, word, status: 'unmarked' | 'correct' | 'wrong', hidden: boolean }
+      accent: 'en-US',        // 'en-US' | 'en-GB'
+      defaultRate: 0.85,      // 0.65 | 0.85 | 1.0
+      filter: 'all',          // 'all' | 'wrong'
+      round: 0,               // 0 = 正式默書, 1+ = 第 X 輪補默
+      speakingCardId: null,   // 正在朗讀的卡片 ID
+      allMasked: false,       // 全部遮蓋狀態
+      voices: [],             // 系統可用語音列表
+      speakTimer: null,       // 延遲播放計時器
+      safetyTimer: null       // 防止 iOS 偶發不觸發 onend 的安全計時器
+    };
+
+    // DOM 元素參照
+    const dom = {
+      voiceStatusBadge: document.getElementById('voice-status-badge'),
+      setupView: document.getElementById('setup-view'),
+      dictationView: document.getElementById('dictation-view'),
+      wordsInput: document.getElementById('words-input'),
+      inputWordCount: document.getElementById('input-word-count'),
+      btnSample: document.getElementById('btn-sample'),
+      btnPaste: document.getElementById('btn-paste'),
+      btnClear: document.getElementById('btn-clear'),
+      btnStart: document.getElementById('btn-start'),
+      accentBtns: document.querySelectorAll('.accent-btn'),
+      rateBtns: document.querySelectorAll('.rate-btn'),
+      roundBadge: document.getElementById('round-badge'),
+      voiceMiniInfo: document.getElementById('voice-mini-info'),
+      btnToggleAllMask: document.getElementById('btn-toggle-all-mask'),
+      btnCopyWrong: document.getElementById('btn-copy-wrong'),
+      btnEditList: document.getElementById('btn-edit-list'),
+      statTotal: document.getElementById('stat-total'),
+      statCorrect: document.getElementById('stat-correct'),
+      statWrong: document.getElementById('stat-wrong'),
+      tabAll: document.getElementById('tab-all'),
+      tabWrong: document.getElementById('tab-wrong'),
+      celebrationBanner: document.getElementById('celebration-banner'),
+      celebrationSubtitle: document.getElementById('celebration-subtitle'),
+      btnRestartAll: document.getElementById('btn-restart-all'),
+      btnNewList: document.getElementById('btn-new-list'),
+      emptyFilterState: document.getElementById('empty-filter-state'),
+      cardsContainer: document.getElementById('cards-container'),
+      bottomRetestBar: document.getElementById('bottom-retest-bar'),
+      btnRetestWrong: document.getElementById('btn-retest-wrong'),
+      btnRetestLabel: document.getElementById('btn-retest-label'),
+      toastBox: document.getElementById('toast-box'),
+      toastText: document.getElementById('toast-text')
+    };
+
+    let toastTimeout = null;
+
+    /**
+     * 顯示輕量級 Toast 提示（取代 alert）
+     */
+    function showToast(message, duration = 2400) {
+      dom.toastText.textContent = message;
+      dom.toastBox.classList.remove('opacity-0', '-translate-y-2');
+      dom.toastBox.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        dom.toastBox.classList.remove('opacity-100', 'translate-y-0');
+        dom.toastBox.classList.add('opacity-0', '-translate-y-2');
+      }, duration);
+    }
+
+    /**
+     * 安全儲存與讀取 localStorage（防止 Safari 私密瀏覽模式拋出例外）
+     */
+    function savePreferences() {
+      try {
+        localStorage.setItem('dictation_prefs_v1', JSON.stringify({
+          rawText: dom.wordsInput.value,
+          accent: state.accent,
+          defaultRate: state.defaultRate
+        }));
+      } catch (e) {
+        // 忽略儲存限制錯誤
+      }
+    }
+
+    function loadPreferences() {
+      try {
+        const saved = localStorage.getItem('dictation_prefs_v1');
+        if (!saved) return;
+        const data = JSON.parse(saved);
+        if (typeof data.rawText === 'string') {
+          dom.wordsInput.value = data.rawText;
+        }
+        if (data.accent === 'en-US' || data.accent === 'en-GB') {
+          state.accent = data.accent;
+        }
+        if ([0.65, 0.85, 1.0].includes(Number(data.defaultRate))) {
+          state.defaultRate = Number(data.defaultRate);
+        }
+      } catch (e) {
+        // 忽略讀取錯誤
+      }
+    }
+
+    /**
+     * =========================================================================
+     * iOS Safari Web Speech API 語音載入與智能選聲
+     * =========================================================================
+     */
+    function loadVoices() {
+      if (!('speechSynthesis' in window)) {
+        dom.voiceStatusBadge.textContent = '不支援語音';
+        dom.voiceStatusBadge.className = 'text-[11px] font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700';
+        return;
+      }
+
+      const available = window.speechSynthesis.getVoices() || [];
+      state.voices = available;
+
+      if (available.length > 0) {
+        const chosen = getBestVoice(state.accent);
+        const label = chosen ? chosen.name.split(' ')[0] : state.accent;
+        dom.voiceStatusBadge.textContent = `🔊 語音就緒 (${label})`;
+        dom.voiceStatusBadge.className = 'text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800';
+      } else {
+        dom.voiceStatusBadge.textContent = '🔊 系統預設語音';
+        dom.voiceStatusBadge.className = 'text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700';
+      }
+    }
+
+    /**
+     * 優先選用 iOS 內建最穩定、自然的人聲語音，避開異常或無聲的特效語音
+     */
+    function getBestVoice(targetLang) {
+      const voices = state.voices.length ? state.voices : (window.speechSynthesis ? window.speechSynthesis.getVoices() : []);
+      if (!voices || voices.length === 0) return null;
+
+      // 排除 iOS 內建容易無聲或怪聲的特效語音
+      const blockedNames = [
+        'Zarvox', 'Trinoids', 'Albert', 'Bad News', 'Bahh', 'Bells',
+        'Boing', 'Bubbles', 'Cellos', 'Deranged', 'Good News', 'Hysterical',
+        'Pipe Organ', 'Whisper', 'Wobble', 'Jester', 'Superstar', 'Organ', 'Kathy'
+      ];
+
+      const isSafeVoice = (v) => !blockedNames.some((bad) => v.name.toLowerCase().includes(bad.toLowerCase()));
+
+      // 依口音定義 iOS 穩定語音優先順序
+      const preferredNames = targetLang === 'en-GB'
+        ? ['Daniel', 'Serena', 'Kate', 'Oliver', 'Arthur', 'Martha', 'Google UK English']
+        : ['Samantha', 'Ava', 'Allison', 'Susan', 'Alex', 'Nicky', 'Tom', 'Aaron', 'Google US English'];
+
+      // 1. 精準比對首選名單 + 語言代碼
+      for (const pref of preferredNames) {
+        const found = voices.find((v) =>
+          v.lang.toLowerCase().replace('_', '-').startsWith(targetLang.toLowerCase()) &&
+          v.name.toLowerCase().includes(pref.toLowerCase()) &&
+          isSafeVoice(v)
+        );
+        if (found) return found;
+      }
+
+      // 2. 尋找該口音的本機內建語音 (localService === true)
+      const localMatch = voices.find((v) =>
+        v.lang.toLowerCase().replace('_', '-').startsWith(targetLang.toLowerCase()) &&
+        v.localService &&
+        isSafeVoice(v)
+      );
+      if (localMatch) return localMatch;
+
+      // 3. 尋找任何符合該口音的安全語音
+      const anyAccentMatch = voices.find((v) =>
+        v.lang.toLowerCase().replace('_', '-').startsWith(targetLang.toLowerCase()) &&
+        isSafeVoice(v)
+      );
+      if (anyAccentMatch) return anyAccentMatch;
+
+      // 4. 退而求其次尋找任何英語安全語音
+      return voices.find((v) => v.lang.toLowerCase().startsWith('en') && isSafeVoice(v)) || null;
+    }
+
+    /**
+     * 預熱 iOS Web Speech API 語音引擎（必須在用戶點擊「開始默書」時同步呼叫）
+     */
+    function warmUpSpeechEngine() {
+      if (!('speechSynthesis' in window)) return;
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        const warmup = new SpeechSynthesisUtterance(' ');
+        warmup.volume = 0; // 靜音預熱解鎖音訊工作階段
+        warmup.lang = state.accent;
+        const voice = getBestVoice(state.accent);
+        if (voice) warmup.voice = voice;
+
+        window._activeUtterance = warmup;
+        window.speechSynthesis.speak(warmup);
+      } catch (e) {
+        // 忽略預熱例外
+      }
+    }
+
+    /**
+     * 核心發音函式：專為 iPhone (iOS Safari) 優化
+     * - 必須由用戶點擊事件直接觸發
+     * - 若正在朗讀則先 cancel 再延遲 50ms 播放；否則 0ms 同步播放
+     * - 使用 window._activeUtterance 保存實例防止被 WebKit GC 回收
+     */
+    function speakWord(cardId, wordText, rate) {
+      if (!('speechSynthesis' in window)) {
+        showToast('此瀏覽器不支援語音朗讀功能');
+        return;
+      }
+
+      // 清除前一次的計時器
+      if (state.speakTimer) {
+        clearTimeout(state.speakTimer);
+        state.speakTimer = null;
+      }
+      if (state.safetyTimer) {
+        clearTimeout(state.safetyTimer);
+        state.safetyTimer = null;
+      }
+
+      // 若處於暫停狀態則自動喚醒
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+
+      const isCurrentlyBusy = window.speechSynthesis.speaking || window.speechSynthesis.pending;
+
+      // 立即更新卡片高亮狀態，提供零延遲視覺回饋
+      setSpeakingCard(cardId);
+
+      const executeSpeak = () => {
+        try {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+
+          const utterance = new SpeechSynthesisUtterance(wordText);
+          utterance.lang = state.accent;
+          utterance.rate = rate;
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+
+          const voice = getBestVoice(state.accent);
+          if (voice) {
+            utterance.voice = voice;
+          }
+
+          // 綁定至全域變數防止 iOS WebKit GC 回收導致發音突然中斷
+          window._activeUtterance = utterance;
+
+          utterance.onstart = () => {
+            setSpeakingCard(cardId);
+          };
+
+          utterance.onend = () => {
+            if (state.speakingCardId === cardId) {
+              setSpeakingCard(null);
+            }
+            window._activeUtterance = null;
+            if (state.safetyTimer) clearTimeout(state.safetyTimer);
+          };
+
+          utterance.onerror = (event) => {
+            // 忽略因主動 cancel 切換生字而引發的 interrupted 錯誤
+            if (event && event.error !== 'interrupted' && event.error !== 'canceled') {
+              showToast('發音遇到問題，請檢查是否開啟靜音模式');
+            }
+            if (state.speakingCardId === cardId) {
+              setSpeakingCard(null);
+            }
+            window._activeUtterance = null;
+            if (state.safetyTimer) clearTimeout(state.safetyTimer);
+          };
+
+          window.speechSynthesis.speak(utterance);
+
+          // 安全超時保護（6秒後自動解除高亮，避免 iOS 偶發漏發 onend）
+          state.safetyTimer = setTimeout(() => {
+            if (state.speakingCardId === cardId) {
+              setSpeakingCard(null);
+            }
+          }, 6000);
+        } catch (err) {
+          setSpeakingCard(null);
+          showToast('無法啟動語音發音');
+        }
+      };
+
+      if (isCurrentlyBusy) {
+        // 正在朗讀中：先 cancel 再延遲 50ms 播放，避免 iOS Safari 吞掉新語音
+        window.speechSynthesis.cancel();
+        state.speakTimer = setTimeout(executeSpeak, 50);
+      } else {
+        // 閒置中：0ms 同步播放，確保完全保留用戶點擊手勢授權
+        executeSpeak();
+      }
+    }
+
+    /**
+     * 更新正在朗讀的卡片高亮樣式（局部 DOM 更新以保持點擊流暢度）
+     */
+    function setSpeakingCard(cardId) {
+      state.speakingCardId = cardId;
+      const allCards = dom.cardsContainer.querySelectorAll('[data-card-id]');
+      allCards.forEach((el) => {
+        const id = el.getAttribute('data-card-id');
+        const wave = el.querySelector('.speaking-wave');
+        if (id === cardId) {
+          el.classList.add('card-speaking');
+          if (wave) wave.classList.remove('hidden');
+        } else {
+          el.classList.remove('card-speaking');
+          if (wave) wave.classList.add('hidden');
+        }
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 文字解析與剪貼簿工具
+     * =========================================================================
+     */
+    function parseWordsFromText(text) {
+      return text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    }
+
+    function updateInputCount() {
+      const words = parseWordsFromText(dom.wordsInput.value);
+      dom.inputWordCount.textContent = `${words.length} 個生字`;
+      savePreferences();
+    }
+
+    /**
+     * 跨瀏覽器與 iFrame 相容的複製函式（優先使用 execCommand('copy')）
+     */
+    function copyTextToClipboard(text, successMsg) {
+      try {
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        // 設定 16px 避免 iOS Safari 聚焦時自動縮放
+        tempTextarea.style.position = 'fixed';
+        tempTextarea.style.top = '0';
+        tempTextarea.style.left = '-9999px';
+        tempTextarea.style.fontSize = '16px';
+        tempTextarea.setAttribute('readonly', '');
+        document.body.appendChild(tempTextarea);
+
+        tempTextarea.select();
+        tempTextarea.setSelectionRange(0, tempTextarea.value.length);
+
+        const ok = document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
+
+        if (ok) {
+          showToast(successMsg);
+          return true;
+        }
+      } catch (e) {
+        // 繼續嘗試現代 API
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast(successMsg))
+          .catch(() => showToast('複製失敗，請手動選取文字複製'));
+      } else {
+        showToast('複製失敗，請手動選取文字複製');
+      }
+      return false;
+    }
+
+    /**
+     * =========================================================================
+     * UI 渲染與互動控制
+     * =========================================================================
+     */
+    function renderVoiceSettingsUI() {
+      // 更新口音按鈕樣式
+      dom.accentBtns.forEach((btn) => {
+        const isSelected = btn.getAttribute('data-accent') === state.accent;
+        if (isSelected) {
+          btn.className = 'accent-btn py-3 px-3 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-800 font-extrabold text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.98]';
+        } else {
+          btn.className = 'accent-btn py-3 px-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.98]';
+        }
+      });
+
+      // 更新預設語速按鈕樣式
+      dom.rateBtns.forEach((btn) => {
+        const isSelected = Number(btn.getAttribute('data-rate')) === state.defaultRate;
+        if (isSelected) {
+          btn.className = 'rate-btn py-3 px-2 rounded-2xl border-2 border-indigo-600 bg-indigo-50 text-indigo-800 font-extrabold text-xs sm:text-sm shadow-sm transition active:scale-[0.98]';
+        } else {
+          btn.className = 'rate-btn py-3 px-2 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-bold text-xs sm:text-sm transition active:scale-[0.98]';
+        }
+      });
+
+      // 更新默書區頂部口音與語速小提示
+      const flag = state.accent === 'en-GB' ? '🇬🇧 英式' : '🇺🇸 美式';
+      dom.voiceMiniInfo.textContent = `${flag}・${state.defaultRate}x`;
+    }
+
+    /**
+     * 啟動新一輪默書
+     */
+    function startDictationRound(wordsList, roundNumber = 0) {
+      state.round = roundNumber;
+      state.filter = 'all';
+      state.allMasked = false;
+      state.speakingCardId = null;
+
+      state.cards = wordsList.map((word, index) => ({
+        id: `word-${roundNumber}-${index}-${Date.now()}`,
+        index: index + 1,
+        word: word,
+        status: 'unmarked', // 'unmarked' | 'correct' | 'wrong'
+        hidden: false
+      }));
+
+      dom.setupView.classList.add('hidden');
+      dom.dictationView.classList.remove('hidden');
+
+      renderDictationView();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /**
+     * 渲染整個默書互動卡片區
+     */
+    function renderDictationView() {
+      const total = state.cards.length;
+      const correctCount = state.cards.filter((c) => c.status === 'correct').length;
+      const wrongCount = state.cards.filter((c) => c.status === 'wrong').length;
+
+      // 1. 更新輪次徽章
+      if (state.round === 0) {
+        dom.roundBadge.textContent = '📖 正式默書';
+        dom.roundBadge.className = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800';
+      } else {
+        dom.roundBadge.textContent = `🔄 第 ${state.round} 輪補默`;
+        dom.roundBadge.className = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300';
+      }
+
+      // 2. 更新全部遮蓋按鈕文字
+      dom.btnToggleAllMask.textContent = state.allMasked ? '🙈 全部顯示' : '👁️ 全部遮蓋';
+
+      // 3. 更新數據統計
+      dom.statTotal.textContent = total;
+      dom.statCorrect.textContent = correctCount;
+      dom.statWrong.textContent = wrongCount;
+
+      // 4. 更新篩選標籤與計數
+      dom.tabAll.textContent = `全部生字 (${total})`;
+      dom.tabWrong.textContent = `只看錯字 (${wrongCount})`;
+
+      if (state.filter === 'all') {
+        dom.tabAll.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-extrabold bg-white text-indigo-700 shadow-sm transition';
+        dom.tabWrong.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 transition';
+      } else {
+        dom.tabWrong.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-extrabold bg-white text-rose-600 shadow-sm transition';
+        dom.tabAll.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 transition';
+      }
+
+      // 5. 檢查是否全部生字過關（全部都答啱，且沒有錯字）
+      const isAllPassed = total > 0 && correctCount === total && wrongCount === 0;
+      if (isAllPassed) {
+        dom.celebrationBanner.classList.remove('hidden');
+        dom.celebrationSubtitle.textContent = state.round === 0
+          ? `一次過全對！共完成 ${total} 個英文生字！`
+          : `經過 ${state.round} 輪補默，所有生字已經全部過關！`;
+      } else {
+        dom.celebrationBanner.classList.add('hidden');
+      }
+
+      // 6. 底部「補默錯字」浮動按鈕顯示控制
+      if (wrongCount > 0) {
+        dom.bottomRetestBar.classList.remove('hidden');
+        dom.btnRetestLabel.textContent = `補默錯字 (${wrongCount} 個)`;
+      } else {
+        dom.bottomRetestBar.classList.add('hidden');
+      }
+
+      // 7. 篩選要顯示的卡片
+      const visibleCards = state.filter === 'wrong'
+        ? state.cards.filter((c) => c.status === 'wrong')
+        : state.cards;
+
+      if (visibleCards.length === 0) {
+        dom.emptyFilterState.classList.remove('hidden');
+      } else {
+        dom.emptyFilterState.classList.add('hidden');
+      }
+
+      // 8. 生成卡片 HTML
+      dom.cardsContainer.innerHTML = visibleCards.map((card) => createCardHTML(card)).join('');
+    }
+
+    /**
+     * 建立單張生字互動卡片的 HTML
+     */
+    function createCardHTML(card) {
+      // 根據答題狀態決定卡片外觀樣式
+      let cardBgClass = 'bg-white border-slate-200/90';
+      let badgeClass = 'bg-slate-100 text-slate-600';
+      let statusLabel = '';
+
+      if (card.status === 'correct') {
+        cardBgClass = 'bg-emerald-50/90 border-emerald-400 shadow-emerald-100/60';
+        badgeClass = 'bg-emerald-600 text-white';
+        statusLabel = '<span class="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">✅ 答啱</span>';
+      } else if (card.status === 'wrong') {
+        cardBgClass = 'bg-rose-50/90 border-rose-400 shadow-rose-100/60';
+        badgeClass = 'bg-rose-600 text-white';
+        statusLabel = '<span class="text-xs font-extrabold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full">❌ 串錯</span>';
+      }
+
+      const speakingClass = state.speakingCardId === card.id ? 'card-speaking' : '';
+      const waveHiddenClass = state.speakingCardId === card.id ? '' : 'hidden';
+
+      // 生字遮蓋或顯示內容
+      const maskedDots = '•'.repeat(Math.min(Math.max(card.word.length, 4), 12));
+      const wordDisplayHTML = card.hidden
+        ? `<div class="flex items-center gap-2 py-0.5">
+             <span class="text-2xl sm:text-3xl font-black tracking-widest text-slate-300 select-none">${maskedDots}</span>
+             <span class="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">已遮蓋</span>
+           </div>`
+        : `<div class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-wide break-words leading-tight">
+             ${escapeHTML(card.word)}
+           </div>`;
+
+      // 啱 / 錯 按鈕選中狀態樣式
+      const correctBtnClass = card.status === 'correct'
+        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20'
+        : 'bg-white hover:bg-emerald-50 text-emerald-700 border-emerald-200';
+
+      const wrongBtnClass = card.status === 'wrong'
+        ? 'bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-500/20'
+        : 'bg-white hover:bg-rose-50 text-rose-700 border-rose-200';
+
+      return `
+        <article
+          data-card-id="${card.id}"
+          class="rounded-3xl border-2 p-4 sm:p-5 shadow-sm transition-all duration-150 ${cardBgClass} ${speakingClass}"
+        >
+          <!-- 卡片頂部：編號 + 狀態 + 遮蓋/顯示眼睛按鈕 -->
+          <div class="flex items-start justify-between gap-3 mb-3.5">
+            <div class="space-y-1.5 min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center justify-center min-w-[30px] h-7 px-2 rounded-xl text-xs font-black ${badgeClass}">
+                  #${card.index}
+                </span>
+                ${statusLabel}
+                <!-- 朗讀中動態聲波 -->
+                <span class="speaking-wave ${waveHiddenClass} inline-flex items-end gap-0.5 h-4 px-2 py-0.5 rounded-full bg-indigo-100" aria-hidden="true">
+                  <span class="wave-bar w-1 h-3 bg-indigo-600 rounded-full"></span>
+                  <span class="wave-bar w-1 h-3 bg-indigo-600 rounded-full"></span>
+                  <span class="wave-bar w-1 h-3 bg-indigo-600 rounded-full"></span>
+                  <span class="wave-bar w-1 h-3 bg-indigo-600 rounded-full"></span>
+                </span>
+              </div>
+
+              <!-- 英文生字顯示區 -->
+              ${wordDisplayHTML}
+            </div>
+
+            <!-- 單卡遮蓋/顯示切換眼睛按鈕 -->
+            <button
+              type="button"
+              data-action="toggle-mask"
+              data-id="${card.id}"
+              aria-label="${card.hidden ? '顯示生字' : '遮蓋生字'}"
+              class="shrink-0 min-w-[46px] min-h-[46px] px-3 rounded-2xl bg-slate-100/90 hover:bg-slate-200 active:scale-95 text-slate-700 flex flex-col items-center justify-center gap-0.5 transition"
+            >
+              <span class="text-lg leading-none">${card.hidden ? '🙈' : '👁️'}</span>
+              <span class="text-[10px] font-bold leading-none">${card.hidden ? '顯示' : '遮蓋'}</span>
+            </button>
+          </div>
+
+          <!-- 卡片操作區：適合單手操作的大尺寸按鈕 -->
+          <div class="space-y-2.5">
+            <!-- 發音控制列（主發音 + 0.55x 慢讀） -->
+            <div class="grid grid-cols-5 gap-2.5">
+              <button
+                type="button"
+                data-action="speak-normal"
+                data-id="${card.id}"
+                class="col-span-3 min-h-[52px] py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] text-white font-extrabold text-base shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition"
+              >
+                <span class="text-xl">🔊</span>
+                <span>發音</span>
+              </button>
+
+              <button
+                type="button"
+                data-action="speak-slow"
+                data-id="${card.id}"
+                class="col-span-2 min-h-[52px] py-3 px-3 rounded-2xl bg-amber-100 hover:bg-amber-200/80 active:scale-[0.97] text-amber-950 border border-amber-300/80 font-extrabold text-sm sm:text-base flex items-center justify-center gap-1.5 transition"
+              >
+                <span class="text-lg">🐢</span>
+                <span>慢讀</span>
+              </button>
+            </div>
+
+            <!-- 對錯標記列（✅ 啱 / ❌ 錯） -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                data-action="mark-correct"
+                data-id="${card.id}"
+                class="min-h-[48px] py-2.5 px-4 rounded-2xl border-2 font-extrabold text-base flex items-center justify-center gap-1.5 active:scale-[0.97] transition ${correctBtnClass}"
+              >
+                <span>✅</span>
+                <span>啱</span>
+              </button>
+
+              <button
+                type="button"
+                data-action="mark-wrong"
+                data-id="${card.id}"
+                class="min-h-[48px] py-2.5 px-4 rounded-2xl border-2 font-extrabold text-base flex items-center justify-center gap-1.5 active:scale-[0.97] transition ${wrongBtnClass}"
+              >
+                <span>❌</span>
+                <span>錯</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * =========================================================================
+     * 事件監聽綁定
+     * =========================================================================
+     */
+    function bindEvents() {
+      // 監聽 iOS / 瀏覽器語音非同步載入完成事件
+      if ('speechSynthesis' in window) {
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+
+      // 輸入框即時計算字數
+      dom.wordsInput.addEventListener('input', updateInputCount);
+
+      // 填入示範生字
+      dom.btnSample.addEventListener('click', () => {
+        dom.wordsInput.value = [
+          'apple',
+          'banana',
+          'elephant',
+          'beautiful',
+          'tomorrow',
+          'butterfly',
+          'strawberry',
+          'wonderful'
+        ].join('\n');
+        updateInputCount();
+        showToast('已填入 8 個示範生字');
+      });
+
+      // 貼上按鈕
+      dom.btnPaste.addEventListener('click', async () => {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          try {
+            const clipText = await navigator.clipboard.readText();
+            if (clipText && clipText.trim()) {
+              const current = dom.wordsInput.value.trim();
+              dom.wordsInput.value = current ? `${current}\n${clipText.trim()}` : clipText.trim();
+              updateInputCount();
+              showToast('已成功貼上生字！');
+              return;
+            } else {
+              showToast('剪貼簿目前沒有文字');
+              return;
+            }
+          } catch (err) {
+            // iOS Safari 安全限制：若網頁無直接讀取剪貼簿權限，自動聚焦輸入框並引導用戶點選系統「貼上」
+          }
+        }
+        dom.wordsInput.focus();
+        showToast('請在輸入框點一下，再按 iPhone 鍵盤或選單的「貼上」', 3200);
+      });
+
+      // 清空按鈕
+      dom.btnClear.addEventListener('click', () => {
+        if (!dom.wordsInput.value.trim()) {
+          showToast('輸入框已經是空的');
+          return;
+        }
+        dom.wordsInput.value = '';
+        updateInputCount();
+        dom.wordsInput.focus();
+        showToast('已清空所有生字');
+      });
+
+      // 口音切換
+      dom.accentBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.accent = btn.getAttribute('data-accent');
+          renderVoiceSettingsUI();
+          loadVoices();
+          savePreferences();
+        });
+      });
+
+      // 預設語速切換
+      dom.rateBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.defaultRate = Number(btn.getAttribute('data-rate'));
+          renderVoiceSettingsUI();
+          savePreferences();
+        });
+      });
+
+      // 點擊「開始默書」：同步預熱 iOS Web Speech API 並切換介面
+      dom.btnStart.addEventListener('click', () => {
+        const words = parseWordsFromText(dom.wordsInput.value);
+        if (words.length === 0) {
+          showToast('請先輸入或貼上至少 1 個英文生字！');
+          dom.wordsInput.focus();
+          return;
+        }
+
+        // 同步預熱 iOS 語音引擎
+        warmUpSpeechEngine();
+
+        state.masterWords = [...words];
+        savePreferences();
+        startDictationRound(state.masterWords, 0);
+      });
+
+      // 卡片區事件委派（發音、慢讀、標記啱/錯、遮蓋生字）
+      dom.cardsContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        const card = state.cards.find((c) => c.id === id);
+        if (!card) return;
+
+        if (action === 'speak-normal') {
+          // 直接在用戶點擊事件中同步觸發朗讀（使用用戶選擇的預設語速）
+          speakWord(card.id, card.word, state.defaultRate);
+        } else if (action === 'speak-slow') {
+          // 直接在用戶點擊事件中同步觸發 0.55x 超慢速朗讀
+          speakWord(card.id, card.word, 0.55);
+        } else if (action === 'toggle-mask') {
+          card.hidden = !card.hidden;
+          state.allMasked = state.cards.every((c) => c.hidden);
+          renderDictationView();
+        } else if (action === 'mark-correct') {
+          card.status = card.status === 'correct' ? 'unmarked' : 'correct';
+          renderDictationView();
+        } else if (action === 'mark-wrong') {
+          card.status = card.status === 'wrong' ? 'unmarked' : 'wrong';
+          renderDictationView();
+        }
+      });
+
+      // 全部遮蓋 / 全部顯示切換
+      dom.btnToggleAllMask.addEventListener('click', () => {
+        state.allMasked = !state.allMasked;
+        state.cards.forEach((c) => {
+          c.hidden = state.allMasked;
+        });
+        renderDictationView();
+      });
+
+      // 篩選標籤：全部生字
+      dom.tabAll.addEventListener('click', () => {
+        state.filter = 'all';
+        renderDictationView();
+      });
+
+      // 篩選標籤：只看錯字
+      dom.tabWrong.addEventListener('click', () => {
+        state.filter = 'wrong';
+        renderDictationView();
+      });
+
+      // 複製錯字按鈕
+      dom.btnCopyWrong.addEventListener('click', () => {
+        const wrongWords = state.cards
+          .filter((c) => c.status === 'wrong')
+          .map((c) => c.word);
+
+        if (wrongWords.length === 0) {
+          showToast('目前未有串錯的生字紀錄');
+          return;
+        }
+
+        copyTextToClipboard(wrongWords.join('\n'), `已複製 ${wrongWords.length} 個錯字！`);
+      });
+
+      // 修改字表按鈕（返回輸入區）
+      dom.btnEditList.addEventListener('click', () => {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        state.speakingCardId = null;
+        dom.bottomRetestBar.classList.add('hidden');
+        dom.dictationView.classList.add('hidden');
+        dom.setupView.classList.remove('hidden');
+        updateInputCount();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // 底部「補默錯字」按鈕
+      dom.btnRetestWrong.addEventListener('click', () => {
+        const wrongWords = state.cards
+          .filter((c) => c.status === 'wrong')
+          .map((c) => c.word);
+
+        if (wrongWords.length === 0) {
+          showToast('沒有需要補默的錯字');
+          return;
+        }
+
+        // 同步預熱語音並進入下一輪補默
+        warmUpSpeechEngine();
+        const nextRound = state.round + 1;
+        startDictationRound(wrongWords, nextRound);
+        showToast(`開始第 ${nextRound} 輪補默（共 ${wrongWords.length} 個錯字）`);
+      });
+
+      // 過關後：重新默寫全部生字
+      dom.btnRestartAll.addEventListener('click', () => {
+        warmUpSpeechEngine();
+        startDictationRound(state.masterWords, 0);
+        showToast('已重置全部生字，重新開始！');
+      });
+
+      // 過關後：輸入新字表
+      dom.btnNewList.addEventListener('click', () => {
+        dom.bottomRetestBar.classList.add('hidden');
+        dom.dictationView.classList.add('hidden');
+        dom.setupView.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    // 初始化應用程式
+    function initApp() {
+      loadPreferences();
+      renderVoiceSettingsUI();
+      updateInputCount();
+      bindEvents();
+    }
+
+    initApp();
+  </script>
+</body>
+</html>
