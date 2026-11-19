@@ -42,10 +42,5 @@ const apps = [
         title: "ID Copy",
         url: "https://lamfungjerry.github.io/gas/idcopy.html",
         icon: "icons/idcopy.png"
-      },
-      {
-        title: "migrate",
-        url: "https://lamfungjerry.github.io/dictation/migrate.html",
-        icon: "icons/dictation.png"
       }
 ];
