@@ -48,8 +48,8 @@ const apps = [
       {
         pos: [6, 3],
         title: "PNG壓縮",
-        url: "https://lamfungjerry.github.io/gas/other/pngcompress.html",
-        icon: "icons/pngcompress.png"
+        url: "https://lamfungjerry.github.io/gas/other/pngresizer.html",
+        icon: "icons/pngresizer.png"
       },
       {
         pos: [6, 3],
