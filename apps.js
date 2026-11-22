@@ -42,13 +42,13 @@ const apps = [
       {
         pos: [6, 2],
         title: "PDF壓縮",
-        url: "https://lamfungjerry.github.io/gas/otherpdfcompress.html",
+        url: "https://lamfungjerry.github.io/gas/other/pdfcompress.html",
         icon: "icons/pdfcompress.png"
       },
       {
         pos: [6, 3],
         title: "ID Copy",
-        url: "https://lamfungjerry.github.io/gas/otheridcopy.html",
+        url: "https://lamfungjerry.github.io/gas/other/idcopy.html",
         icon: "icons/idcopy.png"
       }
 ];
