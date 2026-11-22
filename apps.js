@@ -47,6 +47,12 @@ const apps = [
       },
       {
         pos: [6, 3],
+        title: "PNG壓縮",
+        url: "https://lamfungjerry.github.io/gas/other/pngcompress.html",
+        icon: "icons/pngcompress.png"
+      },
+      {
+        pos: [6, 3],
         title: "ID Copy",
         url: "https://lamfungjerry.github.io/gas/other/idcopy.html",
         icon: "icons/idcopy.png"
