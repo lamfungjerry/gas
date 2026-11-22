@@ -52,7 +52,7 @@ const apps = [
         icon: "icons/pngresizer.png"
       },
       {
-        pos: [6, 3],
+        pos: [6, 4],
         title: "ID Copy",
         url: "https://lamfungjerry.github.io/gas/other/idcopy.html",
         icon: "icons/idcopy.png"
