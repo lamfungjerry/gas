@@ -19,28 +19,10 @@
       --icon-size: 62px;
       --icon-radius: 14px;
       --font-size-title: 12px;
-      --grid-gap-y: 24px;
+      --grid-gap-y: 24px; /* 6 行結構下可維持舒適行距 */
       --grid-gap-x: 16px;
       --cols: 4;
-    }
-
-    /* iPhone 橫向 / 小型平板：6 列 */
-    @media (min-width: 560px) {
-      :root {
-        --cols: 6;
-      }
-    }
-
-    /* iPad / 大螢幕：8 列並放大圖示 */
-    @media (min-width: 900px) {
-      :root {
-        --icon-size: 72px;
-        --icon-radius: 16px;
-        --font-size-title: 13px;
-        --grid-gap-y: 32px;
-        --grid-gap-x: 24px;
-        --cols: 8;
-      }
+      --rows: 6;
     }
 
     * {
@@ -57,8 +39,8 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
-      min-height: 100vh;
-      min-height: 100dvh;
+      height: 100vh;
+      height: 100dvh;
       margin: 0;
       background: radial-gradient(circle at 15% 20%, #2b5876 0%, #4e4376 45%, #1a1c2e 100%);
       background-attachment: fixed;
@@ -66,26 +48,46 @@
       background-position: center;
       color: #ffffff;
       user-select: none;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
-    .desktop-container {
+    /* 左右滑動分頁視窗 */
+    .pages-viewport {
+      flex: 1;
       width: 100%;
-      max-width: 1024px;
+      max-width: 480px;
       margin: 0 auto;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .pages-viewport::-webkit-scrollbar {
+      display: none;
+    }
+
+    .page {
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      scroll-snap-align: start;
       padding-top: calc(env(safe-area-inset-top) + 12px);
-      padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 32px); /* 預留底部圓點空間 */
       padding-left: calc(env(safe-area-inset-left) + 20px);
       padding-right: calc(env(safe-area-inset-right) + 20px);
     }
 
     .app-grid {
+      width: 100%;
       display: grid;
       grid-template-columns: repeat(var(--cols), 1fr);
-      /* 即使中間刻意留空整行，仍維持一致行高 */
-      grid-auto-rows: minmax(calc(var(--icon-size) + 24px), auto);
+      grid-template-rows: repeat(var(--rows), minmax(84px, auto));
       row-gap: var(--grid-gap-y);
       column-gap: var(--grid-gap-x);
       justify-items: center;
@@ -97,7 +99,7 @@
       flex-direction: column;
       align-items: center;
       width: 100%;
-      max-width: 90px;
+      max-width: 84px;
       cursor: pointer;
     }
 
@@ -140,28 +142,54 @@
       text-overflow: ellipsis;
       letter-spacing: 0.2px;
     }
+
+    /* 底部頁數小圓點（超過 6 行出現第 2 頁時自動顯示） */
+    .page-dots {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom) + 10px);
+      left: 0;
+      right: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+      z-index: 10;
+    }
+
+    .page-dots.visible {
+      display: flex;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.35);
+      transition: transform 0.2s ease, background 0.2s ease;
+      cursor: pointer;
+    }
+
+    .dot.active {
+      background: #ffffff;
+      transform: scale(1.2);
+    }
   </style>
 </head>
 <body>
 
-  <main class="desktop-container" id="desktop">
-    <div id="appGrid" class="app-grid"></div>
-  </main>
+  <main id="pagesViewport" class="pages-viewport"></main>
+  <div id="pageDots" class="page-dots"></div>
 
   <script src="apps.js"></script>
 
   <script>
-    const gridContainer = document.getElementById('appGrid');
+    const MAX_COLS = 4;
+    const ROWS_PER_PAGE = 6;
 
-    // 取得當前螢幕闊度對應的最大列數（與 CSS @media 同步）
-    function getMaxCols() {
-      const width = window.innerWidth;
-      if (width >= 900) return 8;
-      if (width >= 560) return 6;
-      return 4;
-    }
+    const viewport = document.getElementById('pagesViewport');
+    const dotsContainer = document.getElementById('pageDots');
 
-    // 解析 pos 格式（支援 [1, 2] 或 "1,2"）
     function parsePos(pos) {
       if (Array.isArray(pos) && pos.length >= 2) {
         return [parseInt(pos[0], 10), parseInt(pos[1], 10)];
@@ -173,10 +201,10 @@
       return [NaN, NaN];
     }
 
-    function createAppElement(app, row, col) {
+    function createAppElement(app, localRow, col) {
       const item = document.createElement('div');
       item.className = 'app-item';
-      item.style.gridRow = row;
+      item.style.gridRow = localRow;
       item.style.gridColumn = col;
 
       item.addEventListener('click', () => {
@@ -208,53 +236,88 @@
     function renderApps() {
       if (typeof apps === 'undefined' || !Array.isArray(apps)) return;
 
-      gridContainer.innerHTML = '';
-      const maxCols = getMaxCols();
-      const occupied = new Set(); // 記錄已被佔用的 "row,col"
-      const fallbackApps = [];    // 存放重複、無效或超出當前螢幕列數的 App
+      viewport.innerHTML = '';
+      dotsContainer.innerHTML = '';
+
+      const occupied = new Set();
+      const placedItems = [];
+      const fallbackApps = [];
       let maxUsedRow = 0;
 
-      // 1. 先處理座標有效且不重複的 App
+      // 1. 放置座標有效且不重複的 App（行 >= 1，列 1~4）
       apps.forEach(app => {
         const [row, col] = parsePos(app.pos);
-        const isValid = Number.isInteger(row) && Number.isInteger(col) && row >= 1 && col >= 1 && col <= maxCols;
+        const isValid = Number.isInteger(row) && Number.isInteger(col) && row >= 1 && col >= 1 && col <= MAX_COLS;
         const key = `${row},${col}`;
 
         if (isValid && !occupied.has(key)) {
           occupied.add(key);
           if (row > maxUsedRow) maxUsedRow = row;
-          gridContainer.appendChild(createAppElement(app, row, col));
+          placedItems.push({ app, row, col });
         } else {
-          // 座標重複、漏填，或列數超過當前裝置上限 -> 放入後備清單
           fallbackApps.push(app);
         }
       });
 
-      // 2. 將重複或後備 App 順延排到最後一行之後
+      // 2. 重複或超出 4 列的 App 順延排到最尾一行之後
       let nextRow = maxUsedRow + 1;
       let nextCol = 1;
 
       fallbackApps.forEach(app => {
-        gridContainer.appendChild(createAppElement(app, nextRow, nextCol));
+        placedItems.push({ app, row: nextRow, col: nextCol });
+        if (nextRow > maxUsedRow) maxUsedRow = nextRow;
         nextCol++;
-        if (nextCol > maxCols) {
+        if (nextCol > MAX_COLS) {
           nextCol = 1;
           nextRow++;
         }
       });
+
+      // 3. 按每頁 6 行切分頁面（第 1~6 行 = 第 1 頁，第 7~12 行 = 第 2 頁）
+      const totalPages = Math.max(1, Math.ceil(maxUsedRow / ROWS_PER_PAGE));
+      const pageGrids = [];
+
+      for (let p = 0; p < totalPages; p++) {
+        const page = document.createElement('section');
+        page.className = 'page';
+
+        const grid = document.createElement('div');
+        grid.className = 'app-grid';
+
+        page.appendChild(grid);
+        viewport.appendChild(page);
+        pageGrids.push(grid);
+      }
+
+      placedItems.forEach(({ app, row, col }) => {
+        const pageIndex = Math.floor((row - 1) / ROWS_PER_PAGE);
+        const localRow = ((row - 1) % ROWS_PER_PAGE) + 1;
+        pageGrids[pageIndex].appendChild(createAppElement(app, localRow, col));
+      });
+
+      // 4. 超過 1 頁時顯示底部頁數圓點
+      if (totalPages > 1) {
+        dotsContainer.classList.add('visible');
+        for (let p = 0; p < totalPages; p++) {
+          const dot = document.createElement('span');
+          dot.className = p === 0 ? 'dot active' : 'dot';
+          dot.addEventListener('click', () => {
+            viewport.scrollTo({ left: p * viewport.clientWidth, behavior: 'smooth' });
+          });
+          dotsContainer.appendChild(dot);
+        }
+
+        viewport.addEventListener('scroll', () => {
+          const currentPage = Math.round(viewport.scrollLeft / viewport.clientWidth);
+          const dots = dotsContainer.querySelectorAll('.dot');
+          dots.forEach((d, idx) => d.classList.toggle('active', idx === currentPage));
+        }, { passive: true });
+      } else {
+        dotsContainer.classList.remove('visible');
+      }
     }
 
     renderApps();
-
-    // 當旋轉螢幕（直向轉橫向）導致最大列數改變時自動重新計算
-    let lastCols = getMaxCols();
-    window.addEventListener('resize', () => {
-      const currentCols = getMaxCols();
-      if (currentCols !== lastCols) {
-        lastCols = currentCols;
-        renderApps();
-      }
-    });
   </script>
 </body>
 </html>
