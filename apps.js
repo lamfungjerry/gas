@@ -40,13 +40,13 @@ const apps = [
         icon: "icons/pdftopng.png"
       },
       {
-        pos: [6, 1],
+        pos: [6, 2],
         title: "PDF壓縮",
         url: "https://lamfungjerry.github.io/gas/otherpdfcompress.html",
         icon: "icons/pdfcompress.png"
       },
       {
-        pos: [6, 1],
+        pos: [6, 3],
         title: "ID Copy",
         url: "https://lamfungjerry.github.io/gas/otheridcopy.html",
         icon: "icons/idcopy.png"
