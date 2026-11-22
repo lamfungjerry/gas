@@ -42,5 +42,10 @@ const apps = [
         title: "ID Copy",
         url: "https://lamfungjerry.github.io/gas/idcopy.html",
         icon: "icons/idcopy.png"
+      },
+      {
+        title: "澳門天氣",
+        url: "https://lamfungjerry.github.io/macau-weather/",
+        icon: "icons/macau-weather.png"
       }
 ];
