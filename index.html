@@ -5,15 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>學習程式</title>
 
-  <!-- 1. 引入 manifest.json，設定 scope 為 "/" 以允許跨 Repo 全螢幕跳轉 -->
   <link rel="manifest" href="manifest.json">
-
-  <!-- 2. iOS Web App 原生全螢幕設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="學習程式">
-  
-  <!-- 3. 主畫面與網站 Icon -->
+  <meta name="theme-color" content="#2b5876">
+
   <link rel="apple-touch-icon" href="icons/launcher.png">
   <link rel="icon" type="image/png" href="icons/launcher.png">
 
@@ -24,18 +21,28 @@
       --font-size-title: 12px;
       --grid-gap-y: 24px;
       --grid-gap-x: 16px;
+      --cols: 4;
     }
-    
-    @media (min-width: 768px) {
+
+    /* iPhone 橫向 / 小型平板：6 列 */
+    @media (min-width: 560px) {
+      :root {
+        --cols: 6;
+      }
+    }
+
+    /* iPad / 大螢幕：8 列並放大圖示 */
+    @media (min-width: 900px) {
       :root {
         --icon-size: 72px;
         --icon-radius: 16px;
         --font-size-title: 13px;
         --grid-gap-y: 32px;
         --grid-gap-x: 24px;
+        --cols: 8;
       }
     }
-    
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -43,12 +50,11 @@
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
     }
-    
-    /* 解決 iOS 狀態列白邊：設定底色與漸層頂部一致 */
+
     html {
       background-color: #2b5876;
     }
-    
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang TC", sans-serif;
       min-height: 100vh;
@@ -60,47 +66,32 @@
       background-position: center;
       color: #ffffff;
       user-select: none;
-      
-      /* 確保桌面可順暢上下碌，已移除會導致 Icon 置中偏下的 display: flex */
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
     }
-    
+
     .desktop-container {
       width: 100%;
       max-width: 1024px;
-      margin: 0 auto; /* 水平置中 */
-      
-      /* 避開 iPhone 瀏海與導覽條，已將頂部距離縮細 (10px) 讓 Icon 靠上 */
-      padding-top: calc(env(safe-area-inset-top) + 10px);
+      margin: 0 auto;
+      padding-top: calc(env(safe-area-inset-top) + 12px);
       padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
       padding-left: calc(env(safe-area-inset-left) + 20px);
       padding-right: calc(env(safe-area-inset-right) + 20px);
-      box-sizing: border-box;
     }
-    
+
     .app-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(var(--cols), 1fr);
+      /* 即使中間刻意留空整行，仍維持一致行高 */
+      grid-auto-rows: minmax(calc(var(--icon-size) + 24px), auto);
       row-gap: var(--grid-gap-y);
       column-gap: var(--grid-gap-x);
       justify-items: center;
-      align-content: start; /* 確保網格內容緊貼頂部排列 */
+      align-content: start;
     }
-    
-    @media (min-width: 560px) {
-      .app-grid {
-        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-      }
-    }
-    
-    @media (min-width: 768px) {
-      .app-grid {
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      }
-    }
-    
+
     .app-item {
       display: flex;
       flex-direction: column;
@@ -109,7 +100,7 @@
       max-width: 90px;
       cursor: pointer;
     }
-    
+
     .app-icon {
       width: var(--icon-size);
       height: var(--icon-size);
@@ -123,19 +114,19 @@
       justify-content: center;
       font-size: calc(var(--icon-size) * 0.5);
     }
-    
+
     .app-icon img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
     }
-    
+
     .app-item:active .app-icon {
       transform: scale(0.90);
       filter: brightness(0.75);
     }
-    
+
     .app-title {
       margin-top: 7px;
       font-size: var(--font-size-title);
@@ -157,46 +148,113 @@
     <div id="appGrid" class="app-grid"></div>
   </main>
 
-  <!-- 載入你的 apps.js 資料檔 -->
   <script src="apps.js"></script>
 
   <script>
     const gridContainer = document.getElementById('appGrid');
 
-    if (typeof apps !== 'undefined' && Array.isArray(apps)) {
+    // 取得當前螢幕闊度對應的最大列數（與 CSS @media 同步）
+    function getMaxCols() {
+      const width = window.innerWidth;
+      if (width >= 900) return 8;
+      if (width >= 560) return 6;
+      return 4;
+    }
+
+    // 解析 pos 格式（支援 [1, 2] 或 "1,2"）
+    function parsePos(pos) {
+      if (Array.isArray(pos) && pos.length >= 2) {
+        return [parseInt(pos[0], 10), parseInt(pos[1], 10)];
+      }
+      if (typeof pos === 'string' && pos.includes(',')) {
+        const parts = pos.split(',');
+        return [parseInt(parts[0], 10), parseInt(parts[1], 10)];
+      }
+      return [NaN, NaN];
+    }
+
+    function createAppElement(app, row, col) {
+      const item = document.createElement('div');
+      item.className = 'app-item';
+      item.style.gridRow = row;
+      item.style.gridColumn = col;
+
+      item.addEventListener('click', () => {
+        window.location.href = app.url;
+      });
+
+      const iconBox = document.createElement('div');
+      iconBox.className = 'app-icon';
+
+      if (app.icon.includes('/') || app.icon.includes('.') || app.icon.startsWith('http')) {
+        const img = document.createElement('img');
+        img.src = app.icon;
+        img.alt = app.title;
+        img.loading = 'lazy';
+        iconBox.appendChild(img);
+      } else {
+        iconBox.textContent = app.icon;
+      }
+
+      const title = document.createElement('span');
+      title.className = 'app-title';
+      title.textContent = app.title;
+
+      item.appendChild(iconBox);
+      item.appendChild(title);
+      return item;
+    }
+
+    function renderApps() {
+      if (typeof apps === 'undefined' || !Array.isArray(apps)) return;
+
+      gridContainer.innerHTML = '';
+      const maxCols = getMaxCols();
+      const occupied = new Set(); // 記錄已被佔用的 "row,col"
+      const fallbackApps = [];    // 存放重複、無效或超出當前螢幕列數的 App
+      let maxUsedRow = 0;
+
+      // 1. 先處理座標有效且不重複的 App
       apps.forEach(app => {
-        // 🔥 將容器設定為 div，防止 iOS Safari 將 <a> 標籤視為跳出 App
-        const item = document.createElement('div');
-        item.className = 'app-item';
+        const [row, col] = parsePos(app.pos);
+        const isValid = Number.isInteger(row) && Number.isInteger(col) && row >= 1 && col >= 1 && col <= maxCols;
+        const key = `${row},${col}`;
 
-        // 🔥 使用 location.href 進行跳轉，確保維持全螢幕狀態
-        item.addEventListener('click', () => {
-          window.location.href = app.url;
-        });
-
-        const iconBox = document.createElement('div');
-        iconBox.className = 'app-icon';
-
-        // 判斷是圖片還是 Emoji
-        if (app.icon.includes('/') || app.icon.includes('.') || app.icon.startsWith('http')) {
-          const img = document.createElement('img');
-          img.src = app.icon;
-          img.alt = app.title;
-          img.loading = 'lazy';
-          iconBox.appendChild(img);
+        if (isValid && !occupied.has(key)) {
+          occupied.add(key);
+          if (row > maxUsedRow) maxUsedRow = row;
+          gridContainer.appendChild(createAppElement(app, row, col));
         } else {
-          iconBox.textContent = app.icon; // 直接顯示 Emoji 或純文字
+          // 座標重複、漏填，或列數超過當前裝置上限 -> 放入後備清單
+          fallbackApps.push(app);
         }
+      });
 
-        const title = document.createElement('span');
-        title.className = 'app-title';
-        title.textContent = app.title;
+      // 2. 將重複或後備 App 順延排到最後一行之後
+      let nextRow = maxUsedRow + 1;
+      let nextCol = 1;
 
-        item.appendChild(iconBox);
-        item.appendChild(title);
-        gridContainer.appendChild(item);
+      fallbackApps.forEach(app => {
+        gridContainer.appendChild(createAppElement(app, nextRow, nextCol));
+        nextCol++;
+        if (nextCol > maxCols) {
+          nextCol = 1;
+          nextRow++;
+        }
       });
     }
+
+    renderApps();
+
+    // 當旋轉螢幕（直向轉橫向）導致最大列數改變時自動重新計算
+    let lastCols = getMaxCols();
+    window.addEventListener('resize', () => {
+      const currentCols = getMaxCols();
+      if (currentCols !== lastCols) {
+        lastCols = currentCols;
+        renderApps();
+      }
+    });
   </script>
 </body>
 </html>
