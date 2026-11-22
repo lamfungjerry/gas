@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>本機 PNG 縮小與增晰工具</title>
+  <!-- 第三方 JS：Pica (高品質縮放與銳化) & UPNG (本機 PNG 智能壓縮) -->
+  <script src="https://cdn.jsdelivr.net/npm/pica@9.0.1/dist/pica.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #059669;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin: 0 0 4px 0;
+    }
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+    .upload-area input { display: none; }
+    .control-group {
+      margin-bottom: 14px;
+    }
+    .control-group:last-child { margin-bottom: 0; }
+    label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .val-badge {
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    button.preset-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+    button.preset-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    input[type="number"], select {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      background: #fff;
+    }
+    input[type="number"] { width: 110px; }
+    select { flex: 1; }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .stats-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .stat-item span { display: block; color: var(--muted); font-size: 0.78rem; }
+    .stat-item strong { font-size: 1rem; color: var(--text); }
+    .stat-item strong.highlight { color: var(--success); }
+    .preview-box {
+      text-align: center;
+      background: repeating-conic-gradient(#e2e8f0 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      max-height: 380px;
+      overflow: auto;
+    }
+    .preview-box img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .btn-download {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-download:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>本機 PNG 縮小與增晰工具</h1>
+      <p class="subtitle">100% 瀏覽器本地運算，資料不上傳任何伺服器</p>
+    </div>
+
+    <!-- 1. 選擇圖片 -->
+    <div class="card">
+      <div class="upload-area" id="dropZone">
+        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp" />
+        <div id="uploadPrompt">
+          <strong>點擊選擇圖片</strong> 或拖曳檔案到此處<br />
+          <span style="font-size: 0.8rem; color: var(--muted);">支援 PNG（輸出統一為 PNG 格式）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 調整選項 -->
+    <div class="card hidden" id="editorSection">
+      <!-- 尺寸設定 -->
+      <div class="control-group">
+        <label>目標尺寸 (px) <span class="val-badge" id="dimBadge">-</span></label>
+        <div class="preset-row" id="presetRow">
+          <button type="button" class="preset-btn" data-px="600">600px</button>
+          <button type="button" class="preset-btn active" data-px="800">800px</button>
+          <button type="button" class="preset-btn" data-px="1024">1024px</button>
+          <button type="button" class="preset-btn" data-px="1280">1280px</button>
+          <button type="button" class="preset-btn" data-px="1920">1920px</button>
+        </div>
+        <div class="input-row">
+          <input type="number" id="targetPx" value="800" min="16" max="8000" />
+          <select id="scaleMode">
+            <option value="max">限制最長邊 (按比例)</option>
+            <option value="width">指定寬度 Width (按比例)</option>
+            <option value="height">指定高度 Height (按比例)</option>
+          </select>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" id="noEnlarge" checked />
+          若原圖小於目標尺寸則保持原大小（避免放大變糊）
+        </label>
+      </div>
+
+      <!-- 淨白增晰 -->
+      <div class="control-group">
+        <label>淨白增晰 (漂白底色 / 加深字跡) <span class="val-badge" id="whitenVal">0%</span></label>
+        <input type="range" id="whitenSlider" min="0" max="100" value="0" />
+      </div>
+
+      <!-- 清晰度 / 銳化 -->
+      <div class="control-group">
+        <label>清晰度 / 銳化 (補償縮小模糊) <span class="val-badge" id="sharpVal">20%</span></label>
+        <input type="range" id="sharpSlider" min="0" max="100" value="20" />
+      </div>
+
+      <!-- 色彩模式 -->
+      <div class="control-group">
+        <label>色彩模式</label>
+        <select id="colorMode">
+          <option value="color">原彩 (Original)</option>
+          <option value="gray">灰階黑白 (Grayscale)</option>
+          <option value="bw">高對比純黑白 (二值化文件模式)</option>
+        </select>
+      </div>
+
+      <!-- PNG 壓縮選項 -->
+      <div class="control-group">
+        <label>PNG 色彩壓縮 (進一步減細檔案)</label>
+        <select id="pngQuant">
+          <option value="0">無損全彩 (Lossless RGBA)</option>
+          <option value="256" selected>智能 256 色 (推薦：畫質無損但體積減半)</option>
+          <option value="64">精簡 64 色 (適合文件/截圖/純黑白)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 3. 預估結果與下載 -->
+    <div class="card hidden" id="resultSection">
+      <div class="stats-bar" style="margin-bottom: 12px;">
+        <div class="stat-item">
+          <span>原始檔案</span>
+          <strong id="origInfo">-</strong>
+        </div>
+        <div class="stat-item">
+          <span>預計輸出 PNG</span>
+          <strong id="outInfo" class="highlight">計算中...</strong>
+        </div>
+      </div>
+
+      <button type="button" class="btn-download" id="downloadBtn" disabled>下載處理後的 PNG</button>
+
+      <div style="margin-top: 14px;">
+        <label>即時輸出預覽</label>
+        <div class="preview-box">
+          <img id="previewImg" alt="預覽圖" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const editorSection = document.getElementById('editorSection');
+    const resultSection = document.getElementById('resultSection');
+
+    const targetPxInput = document.getElementById('targetPx');
+    const scaleModeSelect = document.getElementById('scaleMode');
+    const noEnlargeCheck = document.getElementById('noEnlarge');
+    const whitenSlider = document.getElementById('whitenSlider');
+    const sharpSlider = document.getElementById('sharpSlider');
+    const colorModeSelect = document.getElementById('colorMode');
+    const pngQuantSelect = document.getElementById('pngQuant');
+
+    const dimBadge = document.getElementById('dimBadge');
+    const whitenVal = document.getElementById('whitenVal');
+    const sharpVal = document.getElementById('sharpVal');
+    const origInfo = document.getElementById('origInfo');
+    const outInfo = document.getElementById('outInfo');
+    const previewImg = document.getElementById('previewImg');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let originalImg = null;
+    let originalFile = null;
+    let currentBlob = null;
+    let currentPreviewUrl = null;
+    let debounceTimer = null;
+
+    const picaInstance = window.pica ? window.pica() : null;
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // 上傳與拖曳事件
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('請選擇圖片檔案！');
+        return;
+      }
+      originalFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          originalImg = img;
+          origInfo.textContent = `${img.width}×${img.height} (${formatBytes(file.size)})`;
+          editorSection.classList.remove('hidden');
+          resultSection.classList.remove('hidden');
+          scheduleRender();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 預設按鈕點擊
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        targetPxInput.value = btn.dataset.px;
+        scheduleRender();
+      });
+    });
+
+    targetPxInput.addEventListener('input', () => {
+      document.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.px === targetPxInput.value);
+      });
+      scheduleRender();
+    });
+
+    [scaleModeSelect, noEnlargeCheck, colorModeSelect, pngQuantSelect].forEach(el => {
+      el.addEventListener('change', scheduleRender);
+    });
+
+    whitenSlider.addEventListener('input', () => {
+      whitenVal.textContent = `${whitenSlider.value}%`;
+      scheduleRender();
+    });
+
+    sharpSlider.addEventListener('input', () => {
+      sharpVal.textContent = `${sharpSlider.value}%`;
+      scheduleRender();
+    });
+
+    function scheduleRender() {
+      if (!originalImg) return;
+      outInfo.textContent = '計算中...';
+      downloadBtn.disabled = true;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(processImage, 180);
+    }
+
+    function calcTargetDimensions(origW, origH) {
+      const target = Math.max(16, parseInt(targetPxInput.value, 10) || 800);
+      const mode = scaleModeSelect.value;
+      const noEnlarge = noEnlargeCheck.checked;
+
+      let newW = origW;
+      let newH = origH;
+
+      if (mode === 'max') {
+        const maxSide = Math.max(origW, origH);
+        if (!noEnlarge || maxSide > target) {
+          const ratio = target / maxSide;
+          newW = Math.round(origW * ratio);
+          newH = Math.round(origH * ratio);
+        }
+      } else if (mode === 'width') {
+        if (!noEnlarge || origW > target) {
+          const ratio = target / origW;
+          newW = target;
+          newH = Math.round(origH * ratio);
+        }
+      } else if (mode === 'height') {
+        if (!noEnlarge || origH > target) {
+          const ratio = target / origH;
+          newH = target;
+          newW = Math.round(origW * ratio);
+        }
+      }
+      return { width: Math.max(1, newW), height: Math.max(1, newH) };
+    }
+
+    async function processImage() {
+      const { width, height } = calcTargetDimensions(originalImg.width, originalImg.height);
+      dimBadge.textContent = `${width} × ${height} px`;
+
+      // 建立來源 Canvas
+      const srcCanvas = document.createElement('canvas');
+      srcCanvas.width = originalImg.width;
+      srcCanvas.height = originalImg.height;
+      srcCanvas.getContext('2d').drawImage(originalImg, 0, 0);
+
+      // 建立目標 Canvas
+      const destCanvas = document.createElement('canvas');
+      destCanvas.width = width;
+      destCanvas.height = height;
+
+      const sharpAmount = parseInt(sharpSlider.value, 10) * 1.5; // 0 ~ 150
+
+      // 1. 縮放與銳化
+      if (picaInstance) {
+        await picaInstance.resize(srcCanvas, destCanvas, {
+          unsharpAmount: sharpAmount,
+          unsharpRadius: 0.6,
+          unsharpThreshold: 2
+        });
+      } else {
+        const ctx = destCanvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(srcCanvas, 0, 0, width, height);
+      }
+
+      // 2. 像素濾鏡處理 (淨白增晰 & 色彩模式)
+      const ctx = destCanvas.getContext('2d');
+      const imgData = ctx.getImageData(0, 0, width, height);
+      const data = imgData.data;
+
+      const wRatio = parseInt(whitenSlider.value, 10) / 100;
+      const whitePoint = 255 - wRatio * 85; // 最高將 >=170 的淺灰底拉成純白 255
+      const blackPoint = wRatio * 45;       // 最高將 <=45 的深色字壓成純黑 0
+      const range = Math.max(1, whitePoint - blackPoint);
+      const colorMode = colorModeSelect.value;
+
+      for (let i = 0; i < data.length; i += 4) {
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+
+        // 淨白增晰（色階拉伸）
+        if (wRatio > 0) {
+          r = Math.min(255, Math.max(0, ((r - blackPoint) / range) * 255));
+          g = Math.min(255, Math.max(0, ((g - blackPoint) / range) * 255));
+          b = Math.min(255, Math.max(0, ((b - blackPoint) / range) * 255));
+        }
+
+        // 色彩轉換
+        if (colorMode === 'gray') {
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          r = g = b = lum;
+        } else if (colorMode === 'bw') {
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          const v = lum >= 135 ? 255 : 0;
+          r = g = b = v;
+        }
+
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = b;
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      // 3. 輸出 PNG Blob 並精算大小
+      const quantColors = parseInt(pngQuantSelect.value, 10);
+      let blob;
+
+      if (window.UPNG && quantColors > 0) {
+        const rgbaBuffer = ctx.getImageData(0, 0, width, height).data.buffer;
+        const pngArrayBuffer = window.UPNG.encode([rgbaBuffer], width, height, quantColors);
+        blob = new Blob([pngArrayBuffer], { type: 'image/png' });
+      } else {
+        blob = await new Promise(resolve => destCanvas.toBlob(resolve, 'image/png'));
+      }
+
+      currentBlob = blob;
+      if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
+      currentPreviewUrl = URL.createObjectURL(blob);
+      previewImg.src = currentPreviewUrl;
+
+      const diffPct = Math.round((1 - blob.size / originalFile.size) * 100);
+      const diffText = diffPct >= 0 ? `-${diffPct}%` : `+${Math.abs(diffPct)}%`;
+      outInfo.textContent = `${formatBytes(blob.size)} (${diffText})`;
+      downloadBtn.disabled = false;
+    }
+
+    // 下載檔案
+    downloadBtn.addEventListener('click', () => {
+      if (!currentBlob || !originalFile) return;
+      const baseName = originalFile.name.replace(/\.[^/.]+$/, '');
+      const a = document.createElement('a');
+      a.href = currentPreviewUrl;
+      a.download = `${baseName}_${targetPxInput.value}px.png`;
+      a.click();
+    });
+  </script>
+</body>
+</html>
