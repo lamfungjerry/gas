@@ -36,19 +36,19 @@ const apps = [
       {
         pos: [6, 1],
         title: "PDF>PNG",
-        url: "https://lamfungjerry.github.io/gas/pdftopng.html",
+        url: "https://lamfungjerry.github.io/gas/other/pdftopng.html",
         icon: "icons/pdftopng.png"
       },
       {
         pos: [6, 1],
         title: "PDF壓縮",
-        url: "https://lamfungjerry.github.io/gas/pdfcompress.html",
+        url: "https://lamfungjerry.github.io/gas/otherpdfcompress.html",
         icon: "icons/pdfcompress.png"
       },
       {
         pos: [6, 1],
         title: "ID Copy",
-        url: "https://lamfungjerry.github.io/gas/idcopy.html",
+        url: "https://lamfungjerry.github.io/gas/otheridcopy.html",
         icon: "icons/idcopy.png"
       }
 ];
